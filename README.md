@@ -14,9 +14,9 @@
 
 <p align="center">
 
-  | Project Lead   | Security Officer | Project Owner   | Business Analyst |
-  | -------------- | ---------------- | --------------- | ---------------- |
-  | Kal Marsh      | David Malcolm    | Robyn Terepocki |        |
+  | Project Lead   | Security Officer | Project Owner     | Business Analyst |
+  | -------------- | ---------------- | ----------------- | ---------------- |
+  | Kal Marsh      | David Malcolm    | Cordelia Williams |        |
 
 </p>
 
