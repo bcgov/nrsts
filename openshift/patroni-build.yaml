@@ -77,7 +77,7 @@ parameters:
   - name: BASE_IMAGE_NAME
     required: true
   - name: BASE_IMAGE_TAG
-    required: true
+    required: false
   - name: CPU_LIMIT
     value: "500m"
   - name: MEMORY_LIMIT
