@@ -14,18 +14,25 @@
                     <tbody>
                     <template v-for="(row, i) in claims.data">
                         <tr v-if="row !== null">
-                            <td><a href="#" @click="openEditForm(row)">{{ row.program.program_name }}</a></td>
-                            <td>{{ row.institution.name }}</td>
-                            <td>{{ showYear(row.allocation.py.start_date) }} - {{ showYear(row.allocation.py.end_date) }}</td>
-                            <td>${{ parseFloat(row.estimated_hold_amount) }}</td>
-                            <td>${{ parseFloat(row.registration_fee) + parseFloat(row.materials_fee) + parseFloat(row.program_fee) + parseFloat(row.correction_amount) }}</td>
+                            <td><a href="#" @click="openEditForm(row)">{{ row.program?.program_name || '—' }}</a></td>
+                            <td>{{ row.institution?.name || '—' }}</td>
+                            <td>
+                                <span v-if="row.offering?.py">{{ showYear(row.offering.py.start_date) }} - {{ showYear(row.offering.py.end_date) }}</span>
+                                <span v-else>—</span>
+                            </td>
+                            <td>${{ row.total_claim_amount }}</td>
 <!--                            <td>${{ row.student.total_grant }}</td>-->
                             <td>
                                 <span v-if="row.claim_status === 'Draft'" class="badge rounded-pill text-bg-info">Draft</span>
                                 <span v-else-if="row.claim_status === 'Submitted'" class="badge rounded-pill text-bg-primary">Submitted</span>
                                 <span v-else-if="row.claim_status === 'Hold'" class="badge rounded-pill text-bg-warning">Hold</span>
-                                <span v-else-if="row.claim_status === 'Claimed'" class="badge rounded-pill text-bg-success">Claimed</span>
+                                <span v-else-if="row.claim_status === 'Training Started'" class="badge rounded-pill text-bg-warning">Training Started</span>
+                                <span v-else-if="row.claim_status === 'Training Ended'" class="badge rounded-pill text-bg-warning">Training Ended</span>
+                                <span v-else-if="row.claim_status === 'Completed'" class="badge rounded-pill text-bg-success">Completed</span>
                                 <span v-else-if="row.claim_status === 'Expired'" class="badge rounded-pill text-bg-danger">Expired</span>
+                                <span v-else-if="row.claim_status === 'Declined'" class="badge rounded-pill text-bg-danger">Declined</span>
+                                <span v-else-if="row.claim_status === 'Dropped Out'" class="badge rounded-pill text-bg-danger">Dropped Out</span>
+                                <span v-else-if="row.claim_status === 'Cancelled'" class="badge rounded-pill text-bg-danger">Cancelled</span>
                                 <span v-else class="badge rounded-pill text-bg-secondary">{{ row.claim_status }}</span>
                             </td>
                             <td>{{ formatDate(row.created_at) }}</td>
@@ -49,14 +56,17 @@
             <fieldset>
                 <legend>Application Status Definitions </legend>
                     <p><span class="badge rounded-pill text-bg-primary">Submitted</span> <small>Your application has been sent to the institute for review. </small></p>
-                    <p><span class="badge rounded-pill text-bg-warning">Hold</span> <small>The institution has reserved grant money for your enrollment, which will be applied to your payment once you are stably enrolled. </small></p>
-                    <p><span class="badge rounded-pill text-bg-success">Claimed</span> <small>The institution has claimed funding for your program. </small></p>
-                    <p><span class="badge rounded-pill text-bg-secondary">Canceled</span> <small>The institution has withdrawn a previously reserved grant amount for your program.</small></p>
+                    <p><span class="badge rounded-pill text-bg-warning">Training Started</span> <small>You have started your apprentice program. </small></p>
+                    <p><span class="badge rounded-pill text-bg-warning">Training Ended</span> <small>You have completed your training and reported your exit employment status. </small></p>
+                    <p><span class="badge rounded-pill text-bg-success">Completed</span> <small>The institution has finalized your program. </small></p>
+                    <p><span class="badge rounded-pill text-bg-secondary">Cancelled</span> <small>The institution has withdrawn a previously reserved grant amount for your program.</small></p>
                     <p><span class="badge rounded-pill text-bg-danger">Expired</span> <small>The hold period for the grant application has ended.</small></p>
+                    <p><span class="badge rounded-pill text-bg-danger">Declined</span> <small>Your application has been declined by the institution.</small></p>
+                    <p><span class="badge rounded-pill text-bg-danger">Dropped Out</span> <small>You have dropped out of your program.</small></p>
             </fieldset>
         </div>
 
-            <div v-if="editApplication == ''" class="modal modal-lg fade" id="newApplicationModal" tabindex="-1"
+            <div v-if="editApplication == ''" class="modal modal-xl fade" id="newApplicationModal" tabindex="-1"
                  aria-labelledby="newApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -68,7 +78,7 @@
                     </div>
                 </div>
             </div>
-            <div v-if="editApplication != ''" class="modal modal-lg fade" id="editApplicationModal" tabindex="0"
+            <div v-if="editApplication != ''" class="modal modal-xl fade" id="editApplicationModal" tabindex="0"
                  aria-labelledby="editApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog">
                     <div class="modal-content">

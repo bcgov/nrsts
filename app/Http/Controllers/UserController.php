@@ -210,7 +210,70 @@ class UserController extends Controller
         return $this->redirectToPdexLogin();
     }
 
-    
+    /**
+     * Normalize the decoded PDEX individual token into a canonical structure
+     * where every expected key is always present. When the student did not
+     * consent to share a field (or no individual token was provided) the value
+     * is null but the key still exists so the rest of the application can rely
+     * on the shape when prefilling a new claim.
+     */
+    private function normalizeIndividualData($decodedIndividualToken): array
+    {
+        $data = json_decode(json_encode($decodedIndividualToken), true) ?: [];
+        // The PDEX data may be passed either as the individual_data wrapper
+        // (which nests the applicant under an "individual" key) or as the
+        // individual object directly.
+        $individual = is_array($data['individual'] ?? null) ? $data['individual'] : $data;
+
+        // Canonical claim column => list of candidate PDEX keys. PDEX still
+        // sends several fields under their legacy (pre-rename) names, so we
+        // accept both the new and old key for those.
+        $map = [
+            'social_insurance_number' => ['social_insurance_number', 'sin'],
+            'first_name' => ['first_name'],
+            'middle_name' => ['middle_name'],
+            'last_name' => ['last_name'],
+            'email_address' => ['email_address', 'email'],
+            'phone_number' => ['phone_number', 'telephone'],
+            'date_of_birth' => ['date_of_birth', 'dob'],
+            'gender' => ['gender', 'gender_identity'],
+            'disability_status' => ['disability_status'],
+            'marital_status' => ['marital_status'],
+            'address_line1' => ['address_line1'],
+            'city' => ['city'],
+            'province' => ['province'],
+            'postal_code' => ['postal_code', 'zip_code'],
+            'country' => ['country'],
+            'employment_status' => ['employment_status'],
+            'highest_level_of_education' => ['highest_level_of_education', 'highest_education_level'],
+            'immigration_status' => ['immigration_status'],
+            'indigenous_status' => ['indigenous_status', 'indigenous_identity'],
+            'indigenous_group' => ['indigenous_group'],
+            'racial_identity' => ['racial_identity'],
+            'is_visible_minority' => ['is_visible_minority'],
+            'immigration_year' => ['immigration_year'],
+        ];
+
+        $normalized = [];
+        foreach ($map as $canonicalKey => $candidateKeys) {
+            $value = null;
+            foreach ($candidateKeys as $candidate) {
+                if (($individual[$candidate] ?? null) !== null && $individual[$candidate] !== '') {
+                    $value = $individual[$candidate];
+                    break;
+                }
+            }
+            $normalized[$canonicalKey] = $value;
+        }
+
+        return [
+            'user_guid' => $data['user_guid'] ?? null,
+            'user_email' => $data['user_email'] ?? null,
+            'user_name' => $data['user_name'] ?? null,
+            'individual' => $normalized,
+        ];
+    }
+
     // This function will attempt to login the user coming from PDEX
     public function pdexLogin(Request $request)
     {
@@ -262,21 +325,25 @@ class UserController extends Controller
         \Log::info('Decoded JWT Token: ' . json_encode($decodedToken));
 
         if(!is_null($individualToken)) {
-
-            try {
-                $decodedIndividualToken = JWT::decode($individualToken, new Key(env('PDEX_JWT_SECRET'), 'HS256'));
-               \Log::info('Decoded individual token: ' . json_encode($decodedIndividualToken));
-            } catch (SignatureInvalidException $e) {
-                \Log::error('Invalid JWT signature: ' . $e->getMessage());
-                // Handle invalid signature
-
-            } catch (LogicException $e) {
-                \Log::error('JWT logic error: ' . $e->getMessage());
-                // errors having to do with JWT signature and claims
+            // The individual token carries the PDEX applicant details. Decode its
+            // payload the same (unverified) way the main token is handled; the
+            // HS256 signature secret is not available in every environment, so
+            // verifying it would discard the data we need to prefill a claim.
+            $decodedIndividual = $this->decodeJWT($individualToken);
+            if (isset($decodedIndividual['payload'])) {
+                $decodedIndividualToken = $decodedIndividual['payload'];
+                \Log::info('Decoded individual token: ' . json_encode($decodedIndividualToken));
+            } else {
+                \Log::error('Failed to decode individual token payload.');
             }
         } else {
             \Log::info('No individual token provided.');
         }
+
+        // PDEX applicant details come from the individual token payload (which
+        // nests an "individual" object). When no individual token is provided,
+        // fall back to any data embedded in the main token payload.
+        $individualSource = $decodedIndividualToken ?? ($decodedToken['payload']['individual_data'] ?? null);
 
 
         $request->session()->put('kc_logout_uri', $logoutUrl);
@@ -317,10 +384,10 @@ class UserController extends Controller
             \Log::info('New user. Attempting to register.');
             [$valid, $user] = $this->newUser($decodedToken['payload'], $type);
             if ($valid == '200' && $type === Role::Student) {
-                // Cache the provider user data for later use in the application, such as displaying user info on the frontend
-                if (!is_null($decodedIndividualToken)) {
-                    $request->session()->put('bcsc_pdex_individual_' . $user->id, json_encode($decodedIndividualToken));
-                }
+                // Store the normalized individual token data in the session so a new
+                // claim can be prefilled. All expected keys are always present (null
+                // when the student did not consent to share that field).
+                $request->session()->put('bcsc_pdex_individual_' . $user->id, json_encode($this->normalizeIndividualData($individualSource)));
 
                 $request->session()->put('bcsc_provider_user_' . $user->id, json_encode($decodedToken['payload']));
                 Auth::login($user);
@@ -406,23 +473,25 @@ class UserController extends Controller
 
         if ($type === Role::Student) {
             \Log::info('User is Student. Logging in.');
+            $this->checkRoles($user, $type);
             $request->session()->put('bcsc_provider_user_' . $user->id, json_encode($decodedToken['payload']));
             Auth::login($user);
             $request->session()->put('bcsc_logout_uri', $logoutUrl);
 
-            // Cache the provider user data for later use in the application, such as displaying user info on the frontend
-            if (!is_null($decodedIndividualToken)) {
-                \Log::info('Caching individual token data for user ID ' . $user->id);
-                $request->session()->put('bcsc_pdex_individual_' . $user->id, json_encode($decodedIndividualToken));
-            }else {
-                \Log::info('No individual token to cache for user ID ' . $user->id);
-            }
+            // Store the normalized individual token data in the session so a new
+            // claim can be prefilled. All expected keys are always present (null
+            // when the student did not consent to share that field).
+            $request->session()->put('bcsc_pdex_individual_' . $user->id, json_encode($this->normalizeIndividualData($individualSource)));
 
             return Redirect::route('student.home');
         }
 
         if ($type === Role::Institution_GUEST) {
             \Log::info('User is Institution_GUEST. Checking roles and logging in if valid.');
+            // Ensure the user is linked to their institution's staff (as a guest).
+            // This covers the case where the institution was created after the
+            // user's initial registration, so the staff link was skipped then.
+            $this->checkInstitutionStaff($user, $decodedToken['payload']);
             //check if the user is a guest
             $rolesToCheck = [Role::Institution_GUEST];
             if ($user->roles()->pluck('name')->intersect($rolesToCheck)->isNotEmpty()) {

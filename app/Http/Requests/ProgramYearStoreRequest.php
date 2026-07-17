@@ -40,7 +40,7 @@ class ProgramYearStoreRequest extends FormRequest
             'guid' => 'required',
             'start_date' => 'required|date_format:Y-m-d',
             'end_date' => 'required|date_format:Y-m-d',
-            'claim_percent' => 'required|numeric|min:0|max:100',
+            'total_budget' => 'required|numeric|min:0',
             'status' => 'required|in:active,inactive',
             'last_touch_by_user_guid' => 'required|exists:users,guid',
             'comment' => 'nullable',

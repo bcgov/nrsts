@@ -3,43 +3,41 @@
 namespace App\Listeners;
 
 use App\Events\ProgramYearUpdated;
-use App\Models\Allocation;
+use App\Models\ProgramOffering;
 use App\Models\ProgramYear;
 
 class ProcessUpdatedProgramYear
 {
     /**
      * Handle the event.
-     * This will update the status of all allocations under the modified program year to match the program year's status.
-     * If the modified record status is set to active then all other program years and associated allocations would be switched to inactive.
+     * When a program year is set to active, all other program years are switched to
+     * inactive. Program offerings follow their program year: offerings in the active
+     * program year become active, offerings in every other program year become inactive.
      */
     public function handle(ProgramYearUpdated $event): void
     {
-        // Update the status of all allocations associated with this program year to match the PY status
         $programYearId = $event->programYear->id;
         $status = $event->status;
-        $programYear = ProgramYear::with('allocations')->find($programYearId);
+        $programYear = ProgramYear::find($programYearId);
 
-        if ($programYear) {
-            // Update the status of the program year's allocations
-            foreach ($programYear->allocations as $allocation) {
-                $allocation->status = $status;
-                $allocation->save();
-            }
+        if (! $programYear) {
+            return;
+        }
 
-            // Deactivate other program years if the status is active
-            if ($status === 'active') {
-                // Deactivate all other program years
-                ProgramYear::where('id', '!=', $programYearId)->update(['status' => 'inactive']);
+        // Deactivate other program years if the status is active
+        if ($status === 'active') {
+            // Deactivate all other program years
+            ProgramYear::where('id', '!=', $programYearId)->update(['status' => 'inactive']);
 
-                // Get IDs of allocations associated with the old program years
-                $allocationIds = Allocation::whereHas('py', function ($query) use ($programYearId) {
-                    $query->where('id', '!=', $programYearId);
-                })->pluck('id');
+            // Activate the offerings that belong to the now active program year.
+            ProgramOffering::where('program_year_guid', $programYear->guid)
+                ->update(['active_status' => true]);
 
-                // Batch update the status of the allocations
-                Allocation::whereIn('id', $allocationIds)->update(['status' => 'inactive']);
-            }
+            // Deactivate offerings that belong to the now inactive program years.
+            // Offerings are linked to a program year via program_year_guid.
+            ProgramOffering::whereNotNull('program_year_guid')
+                ->where('program_year_guid', '!=', $programYear->guid)
+                ->update(['active_status' => false]);
         }
     }
 }

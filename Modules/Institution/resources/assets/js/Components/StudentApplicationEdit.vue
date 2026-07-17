@@ -14,16 +14,16 @@
                 </div>
                 <div class="col-md-4">
                     <Label for="inputEmail" class="form-label" value="Email" />
-                    <Input type="email" class="form-control" id="inputEmail" :value="results.email" readonly="readonly" disabled/>
+                    <Input type="email" class="form-control" id="inputEmail" :value="results.email_address" readonly="readonly" disabled/>
                 </div>
 
                 <div class="col-md-3">
                     <Label for="inputSin" class="form-label" value="SIN" />
-                    <Input type="number" min="100000000" max="999999999" class="form-control" id="inputSin" :value="results.sin" readonly="readonly" disabled/>
+                    <Input type="number" min="100000000" max="999999999" class="form-control" id="inputSin" :value="results.social_insurance_number" readonly="readonly" disabled/>
                 </div>
                 <div class="col-md-3">
                     <Label for="inputDob" class="form-label" value="Birth Date" />
-                    <Input type="text" class="form-control" id="inputDob" :value="results.dob" readonly="readonly" disabled/>
+                    <Input type="text" class="form-control" id="inputDob" :value="results.date_of_birth" readonly="readonly" disabled/>
                 </div>
                 <div class="col-md-3">
                     <Label for="inputCity" class="form-label" value="City" />
@@ -31,7 +31,7 @@
                 </div>
                 <div class="col-md-3">
                     <Label for="inputPostalCode" class="form-label" value="Postal Code" />
-                    <Input type="text" class="form-control" id="inputPostalCode" :value="results.zip_code" readonly="readonly" disabled/>
+                    <Input type="text" class="form-control" id="inputPostalCode" :value="results.postal_code" readonly="readonly" disabled/>
                 </div>
 
                 <hr/>
@@ -54,23 +54,6 @@
                             </template>
                         </Select>
                     </div>
-                    <div v-if="newApplicationForm.program_guid != ''" class="col-12">
-                        <div class="form-check">
-                            <label for="flexCheckChecked1" class="form-check-label">
-                                {{ $attrs.utils['Student Agreement'][0].field_name }}
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="flexCheckChecked1"
-                                   v-model="newApplicationForm.agreement_confirmed" :checked="newApplicationForm.agreement_confirmed" />
-                        </div>
-                        <div class="form-check">
-                            <label for="flexCheckChecked2" class="form-check-label">
-                                {{ $attrs.utils['Student Registration Confirmation'][0].field_name }}
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="flexCheckChecked2"
-                                   v-model="newApplicationForm.registration_confirmed" :checked="newApplicationForm.registration_confirmed" />
-                        </div>
-                    </div>
-
                     <div v-if="newApplicationForm.processing" class="text-center">
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -140,8 +123,6 @@ export default {
                 formFailMsg: 'There was an error submitting this form.',
                 institution_guid: "",
                 program_guid: "",
-                agreement_confirmed: false,
-                registration_confirmed: false,
                 claim_status: "Submitted"
             },
         }

@@ -5,9 +5,9 @@ namespace Modules\Institution\Http\Controllers;
 use App\Events\ClaimSubmitted;
 use App\Http\Controllers\Controller;
 use App\Http\Requests\ClaimEditRequest;
-use App\Models\Allocation;
 use App\Models\Claim;
 use App\Models\Program;
+use App\Models\ProgramOffering;
 use App\Models\ProgramYear;
 use App\Models\User;
 use App\Services\PdexService;
@@ -32,36 +32,43 @@ class ClaimController extends Controller
         // Get the inst cap and check if we have hit the cap for issued attestations
         // This is going to be all attes. under this inst. and are using the same fed cap as this.
         $user = User::find(Auth::user()->id);
-        $allocations = $this->getAllocations($user);
-//        $allocation = $allocations->where('institution_guid', $user->institution->guid)->first();
+        $offerings = $this->getOfferings($user);
 
-        $claims = $this->paginateClaims($allocations);
-        \Log::info("AllocationGuids 0.1: " . json_encode($allocations->pluck('guid')->toArray()));
+        $claims = $this->paginateClaims($offerings);
 
         return Inertia::render('Institution::Claims', ['error' => null, 'results' => $claims,
             'institution' => $user->institution,
             'countries' => null,
-//            'allocation' => $allocation
         ]);
     }
 
     public function fetchClaims(Request $request, $guid = null)
     {
         if (! is_null($guid)) {
-            $claim = Claim::where('guid', $guid)->with('institution', 'program', 'user', 'allocation')->first();
+            $programs = [];
+            $claim = Claim::where('guid', $guid)->with('institution', 'program', 'user', 'offering')->first();
             if (! is_null($claim)) {
-                $programs = Program::where('institution_guid', $claim->institution_guid)->get();
+                // Programs are global; the ones selectable for this claim are those with an
+                // active offering at the claim's institution (plus the claim's current program,
+                // so it always renders even if its offering is no longer active).
+                $programGuids = ProgramOffering::where('institution_guid', $claim->institution_guid)
+                    ->where('active_status', true)
+                    ->pluck('program_guid')
+                    ->push($claim->program_guid)
+                    ->filter()
+                    ->unique()
+                    ->all();
+
+                $programs = Program::whereIn('guid', $programGuids)->orderBy('program_name')->get();
             }
 
             return Response::json(['status' => true, 'programs' => $programs, 'claim' => $claim]);
         }
 
         $user = User::find(Auth::user()->id);
-        $allocations = $this->getAllocations($user);
-        \Log::info("AllocationGuids 0: " . json_encode($allocations->pluck('guid')->toArray()));
+        $offerings = $this->getOfferings($user);
 
-        //$allocation = $allocations->where('institution_guid', $user->institution->guid)->first();
-        $body = $this->paginateClaims($allocations);
+        $body = $this->paginateClaims($offerings);
 
         return Response::json(['status' => true, 'body' => $body]);
     }
@@ -106,8 +113,9 @@ class ClaimController extends Controller
     private function paginateStudentClaims($studentGuid)
     {
         $user = Auth::user();
-        $claims = Claim::where('user_guid', $studentGuid)->with('user', 'program', 'allocation', 'institution')
-            ->where('institution_guid', $user->institution->guid);
+        $claims = Claim::where('user_guid', $studentGuid)->with('user', 'program', 'offering', 'institution')
+            ->where('institution_guid', $user->institution->guid)
+            ->whereNotIn('claim_status', ['Draft']);
 
         if (request()->sort !== null) {
             $claims = $claims->orderBy(request()->sort, request()->direction);
@@ -122,27 +130,25 @@ class ClaimController extends Controller
     {
 
         $user = User::find(Auth::user()->id);
-        $allocations = $this->getAllocations($user);
+        $offerings = $this->getOfferings($user);
 
-        $allocation = $allocations->where('institution_guid', $user->institution->guid)->first();
+        $offeringGuids = $offerings->pluck('guid')->toArray();
 
         $data = Claim::where('institution_guid', $user->institution->guid)
-            ->where('allocation_guid', $allocation->guid)
+            ->whereIn('program_offering_guid', $offeringGuids)
             ->whereNotIn('claim_status', ['Draft'])
-            ->with('user', 'program', 'allocation', 'institution')
+            ->with('user', 'program', 'offering', 'institution')
             ->orderByDesc('created_at')->get();
 
         $csvData = [];
         $csvDataHeader = ['PROGRAM NAME', 'SIN', 'FIRST NAME', 'LAST NAME', 'DOB', 'EMAIL', 'CITY',
-            'POSTAL CODE', 'STATUS', 'REGISTRATION FEE', 'MATERIALS FEE', 'PROGRAM FEE', 'ADMIN %', 'FUNDING TYPE',
-            'EST. HOLD AMOUNT', 'CORRECTION', 'STABLE ENROL. DATE', 'EXPEC. STABLE ENROL. DATE', 'EXPIRY DATE','CLAIMED BY', 'ISSUE DATE', 'FEEDBACK',
-            'OUTCOME EFFECT. DATE', 'OUTCOME STATUS'];
+            'POSTAL CODE', 'STATUS', 'FUNDING TYPE', 'CLAIM TOTAL', 'CLAIMED BY', 'ISSUE DATE', 'FEEDBACK',
+            'OUTCOME STATUS'];
 
         foreach ($data as $d) {
-            $csvData[] = [$d->program->program_name, $d->sin, $d->first_name, $d->last_name, $d->dob, $d->email, $d->city,
-                $d->zip_code, $d->claim_status, $d->registration_fee, $d->materials_fee, $d->program_fee, $d->claim_percent, ($d->funding_type ?: optional($d->program)->funding_type),
-                $d->estimated_hold_amount, $d->correction_amount, $d->stable_enrolment_date, $d->expected_stable_enrolment_date,
-                $d->expiry_date, $d->claimed_by_name, $d->updated_at, $d->process_feedback, $d->outcome_effective_date, $d->outcome_status];
+            $csvData[] = [$d->program->program_name, $d->social_insurance_number, $d->first_name, $d->last_name, $d->date_of_birth, $d->email_address, $d->city,
+                $d->postal_code, $d->claim_status, ($d->funding_type ?: optional($d->program)->funding_type),
+                $d->total_claim_amount, $d->claimed_by_name, $d->updated_at, $d->process_feedback, $d->outcome_status];
         }
         $output = fopen('php://temp', 'w');
         // Write CSV headers
@@ -161,11 +167,11 @@ class ClaimController extends Controller
         return $response;
     }
 
-    private function paginateClaims($allocations)
+    private function paginateClaims($offerings)
     {
         $user = Auth::user();
 
-        if (empty($allocations)) {
+        if (empty($offerings) || $offerings->isEmpty()) {
             // Return empty paginator
             $emptyData = new Collection();
             $emptyPaginator = new LengthAwarePaginator(
@@ -182,14 +188,12 @@ class ClaimController extends Controller
             return $emptyPaginator->onEachSide(1);
         }
 
-        // An institution can have multiple allocations for the same program year
-        // So we need to get the allocation guids
-        $allocationGuids = $allocations->pluck('guid')->toArray();
-        \Log::info("AllocationGuids: " . json_encode($allocationGuids));
+        // An institution can have multiple active offerings for the same program
+        // year, so we gather all of their guids.
+        $offeringGuids = $offerings->pluck('guid')->toArray();
 
         $claims = Claim::where('institution_guid', $user->institution->guid)
-            ->whereIn('allocation_guid', $allocationGuids)
-//            ->where('allocation_guid', $allocation->guid)
+            ->whereIn('program_offering_guid', $offeringGuids)
             ->whereNotIn('claim_status', ['Draft'])
             ->with('user', 'program');
 
@@ -210,8 +214,8 @@ class ClaimController extends Controller
                 'program' => $claims->where('program_guid', request()->filter_term),
                 'fname' => $claims->where('first_name', 'ILIKE', '%'.request()->filter_term.'%'),
                 'lname' => $claims->where('last_name', 'ILIKE', '%'.request()->filter_term.'%'),
-                'sin' => $claims->where('sin', 'ILIKE', '%'.request()->filter_term.'%'),
-                'email' => $claims->where('email', 'ILIKE', '%'.request()->filter_term.'%'),
+                'sin' => $claims->where('social_insurance_number', 'ILIKE', '%'.request()->filter_term.'%'),
+                'email' => $claims->where('email_address', 'ILIKE', '%'.request()->filter_term.'%'),
                 'status' => $claims->where('claim_status', 'ILIKE', $claim_status),
                 default => $claims, // Default case: return $claims unchanged
             };
@@ -223,21 +227,23 @@ class ClaimController extends Controller
             $claims = $claims->orderBy('created_at', 'desc');
         }
 
-        return $claims->with('institution.allocations', 'institution.programs')->paginate(25)->onEachSide(1)->appends(request()->query());
+        return $claims->with('institution.activePrograms')->paginate(25)->onEachSide(1)->appends(request()->query());
     }
 
-    private function getAllocations($user)
+    private function getOfferings($user)
     {
         $cacheProgramYear = Cache::get('global_program_years_' . $user->institution->guid);
-        $programYear = ProgramYear::where('guid', $cacheProgramYear['default'])->first();
+        $programYear = isset($cacheProgramYear['default'])
+            ? ProgramYear::where('guid', $cacheProgramYear['default'])->first()
+            : ProgramYear::where('status', 'active')->first();
 
-        $allocations = Allocation::where('institution_guid', $user->institution->guid)
+        if (is_null($programYear)) {
+            return collect();
+        }
+
+        return ProgramOffering::where('institution_guid', $user->institution->guid)
             ->where('program_year_guid', $programYear->guid)
+            ->where('active_status', true)
             ->with('py')->orderByDesc('created_at')->get();
-
-        \Log::info("programYear guid: " . $cacheProgramYear['default']);
-        \Log::info("AllocationGuids 1: " . json_encode($allocations->pluck('guid')->toArray()));
-
-        return $allocations;
     }
 }

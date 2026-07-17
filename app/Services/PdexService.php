@@ -113,4 +113,56 @@ class PdexService
             return $this->get('/countries') ?? [];
         });
     }
+
+    /**
+     * Fetch the student profile field definitions from PDEX and return a
+     * structured payload for the applicant form:
+     *   - options:   selectable lists keyed by field_id ({ value, label }).
+     *   - labels:    display labels for checkbox fields keyed by field_id.
+     *   - countries: title-cased country names for the country dropdown.
+     * Cached so the form stays fast and keeps working if PDEX is down.
+     *
+     * @return array{options: array<string, array<int, array{value: string, label: string}>>, labels: array<string, string>, countries: array<int, string>}
+     */
+    public function studentUtils(): array
+    {
+        return Cache::remember('pdex_student_utils', 380, function () {
+            $fields = $this->get('/utils/student') ?? [];
+
+            $options = [];
+            $labels = [];
+
+            if (is_array($fields)) {
+                foreach ($fields as $field) {
+                    if (! is_array($field) || empty($field['field_id'])) {
+                        continue;
+                    }
+
+                    if (($field['type'] ?? null) === 'select' && ! empty($field['options'])) {
+                        $options[$field['field_id']] = array_values(array_map(function ($opt) {
+                            return [
+                                'value' => (string) ($opt['value'] ?? ($opt['label'] ?? '')),
+                                'label' => (string) ($opt['label'] ?? ($opt['value'] ?? '')),
+                            ];
+                        }, $field['options']));
+                    }
+
+                    if (($field['type'] ?? null) === 'checkbox' && ! empty($field['label'])) {
+                        $labels[$field['field_id']] = (string) $field['label'];
+                    }
+                }
+            }
+
+            $countries = array_values(array_map(
+                fn ($country) => ucwords(strtolower((string) ($country['name'] ?? ''))),
+                array_filter($this->countries(), fn ($c) => is_array($c) && ! empty($c['name']))
+            ));
+
+            return [
+                'options' => $options,
+                'labels' => $labels,
+                'countries' => $countries,
+            ];
+        });
+    }
 }

@@ -4,16 +4,7 @@
             <span>Program</span>
         </th>
         <th scope="col" class="text-nowrap">
-                <span>Est. Hold</span>
-        </th>
-        <th scope="col" class="text-nowrap">
-            <span title="Registration Fee">Reg. Fee</span>
-        </th>
-        <th scope="col" class="text-nowrap">
-            <span title="Materials Fee">Mat. Fee</span>
-        </th>
-        <th scope="col" class="text-nowrap">
-            <span title="Program Fee">Prog. Fee</span>
+            <span>Claim Total</span>
         </th>
         <th scope="col" class="text-nowrap">
             <span>Status</span>

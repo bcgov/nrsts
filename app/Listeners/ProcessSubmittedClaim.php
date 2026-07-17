@@ -3,9 +3,7 @@
 namespace App\Listeners;
 
 use App\Events\ClaimSubmitted;
-use App\Models\AllocationFundingType;
 use App\Models\Claim;
-use App\Models\Program;
 use Illuminate\Support\Facades\Log;
 
 class ProcessSubmittedClaim
@@ -17,235 +15,36 @@ class ProcessSubmittedClaim
     {
         Log::info('handle institution claim submitted');
 
-        // Get the cap, attestation and status from the event
         $claim_before_update = $event->claim;
         $status = $event->status;
-        $claim = Claim::where('id', $claim_before_update->id)->with('allocation.py', 'user')->first();
-        $program = Program::where('guid', $claim->program_guid)->first();
-        $student = $claim->user;
+        $claim = Claim::where('id', $claim_before_update->id)->with('offering.py', 'user')->first();
         $claim->process_feedback = null;
 
-
-//        Log::info($claim_before_update->claim_status . ' => ' . $status);
-
+        // Allow the claim to be updated even when its offering's program year is
+        // inactive, but only when the update is adding the outcome status.
         $allowedToUpdateClaimFromInactivePy = false;
-        // If the claim is to add outcome_effective_date and outcome_status
-        // Then check $claim_before_update->outcome_effective_date and $claim_before_update->outcome_status
-        // They should be null and $claim->outcome_effective_date and $claim->outcome_status should be set
-        if($claim_before_update->outcome_effective_date === null && $claim_before_update->outcome_status === null
-            && $claim->outcome_effective_date !== null && $claim->outcome_status !== null) {
+        if ($claim_before_update->outcome_status === null && $claim->outcome_status !== null) {
             $allowedToUpdateClaimFromInactivePy = true;
         }
 
-        if (!$allowedToUpdateClaimFromInactivePy && $claim->allocation->status != 'active' && $status != 'Cancelled') {
+        if (!$allowedToUpdateClaimFromInactivePy && ! ($claim->offering && $claim->offering->active_status) && $status != 'Cancelled') {
             $claim->claim_status = 'Draft';
-        } else {
-            $claim->claim_percent = $claim->allocation->py->claim_percent;
+        }
 
-            // If the student is moving the claim from Draft to Submitted
-            if ($claim_before_update->claim_status === 'Draft' && $status === 'Submitted') {
-                Log::info('claim is moving from Draft to Submitted');
-                $claim->estimated_hold_amount = 0;
-                $claim->total_claim_amount = 0;
-                $claim->program_fee = 0;
-                $claim->materials_fee = 0;
-                $claim->registration_fee = 0;
+        // Enforce the offering seat limit when an institution confirms EI for a
+        // claim. Each confirmed claim consumes one seat, so the offering is full
+        // once the number of committed claims exceeds the offering's seat count.
+        elseif ($claim_before_update->claim_status === 'Submitted' && $status === 'EI Confirmed') {
+            $totalSeats = (int) ($claim->offering->total_seats ?? 0);
 
-                // Calculate the total of claims for the student that are in Hold
-                $totalHoldClaims = $student->claims()
-                    ->where('claim_status', 'Hold')
-                    ->select('estimated_hold_amount')
-                    ->pluck('estimated_hold_amount')
-                    ->sum();
+            $committedCount = Claim::whereIn('claim_status', ['EI Confirmed', 'Training Started', 'Training Ended', 'Completed'])
+                ->where('institution_guid', $claim->institution_guid)
+                ->where('program_offering_guid', $claim->program_offering_guid)
+                ->count();
 
-                // Calculate the total of claims for the student excluding Draft, Hold, Expired, Cancelled
-                $totalActiveClaims = $student->claims()
-                    ->where('claim_status', 'Claimed')
-                    ->sum(\DB::raw('COALESCE(program_fee, 0) + COALESCE(materials_fee, 0) + COALESCE(registration_fee, 0) + COALESCE(correction_amount, 0)'));
-
-//                Log::info('totalHoldClaims = '.number_format($totalHoldClaims, 0));
-//                Log::info('totalActiveClaims = '.number_format($totalActiveClaims, 0));
-
-                // If the student has reached the grant limit, prevent moving it to Submitted
-                if (((float) $totalHoldClaims + (float) $totalActiveClaims) > (float) env('TOTAL_GRANT')) {
-                    $claim->process_feedback = 'Student has reached the total claim amount';
-                    $claim->claim_status = 'Draft';
-                }
-            }
-
-            // If the claim is Submitted and the inst. is moving to Hold
-            elseif ($claim_before_update->claim_status === 'Submitted' && $status === 'Hold') {
-//                Log::info('claim is moving from Submitted to Hold');
-
-                // Calculate the total of claims for the student that are in Hold
-                $totalHoldClaims = $student->claims()
-                    ->where('claim_status', 'Hold')
-                    ->select('estimated_hold_amount')
-                    ->pluck('estimated_hold_amount')
-                    ->sum();
-
-                // Calculate the total of claims for the student excluding Draft, Hold, Expired, Cancelled
-                $totalActiveClaims = $student->claims()
-                    ->where('claim_status', 'Claimed')
-                    ->sum(\DB::raw('COALESCE(program_fee, 0) + COALESCE(materials_fee, 0) + COALESCE(registration_fee, 0) + COALESCE(correction_amount, 0)'));
-
-//                Log::info('totalHoldClaims = '.number_format($totalHoldClaims, 0));
-//                Log::info('totalActiveClaims = '.number_format($totalActiveClaims, 0));
-
-                // If the student has reached the grant limit, prevent moving it to Hold
-                if (((float) $totalHoldClaims + (float) $totalActiveClaims) > (float) env('TOTAL_GRANT')) {
-                    $claim->process_feedback = 'Student total claims of Hold and Claimed, including this,
-                    is $'.(float) $totalHoldClaims + (float) $totalActiveClaims.' > $'.(float) env('TOTAL_GRANT').',
-                    student currently has $' . (float) $totalHoldClaims + (float) $totalActiveClaims - (float)$claim->estimated_hold_amount . ' in claimed and held.';
-                    $claim->claim_status = 'Submitted';
-                    $claim->estimated_hold_amount = 0;
-                }
-            }
-
-            // If the claim is in Hold and the inst. is just updating it to Hold
-            elseif ($claim_before_update->claim_status === 'Hold' && $status === 'Hold') {
-//                Log::info('claim is staying as Hold');
-
-                // Calculate the total of claims for the student that are in Hold
-                $totalHoldClaims = $student->claims()
-                    ->where('claim_status', 'Hold')
-                    ->select('estimated_hold_amount')
-                    ->pluck('estimated_hold_amount')
-                    ->sum();
-
-                // Calculate the total of claims for the student excluding Draft, Hold, Expired, Cancelled
-                $totalActiveClaims = $student->claims()
-                    ->where('claim_status', 'Claimed')
-                    ->sum(\DB::raw('COALESCE(program_fee, 0) + COALESCE(materials_fee, 0) + COALESCE(registration_fee, 0) + COALESCE(correction_amount, 0)'));
-
-//                Log::info('totalHoldClaims = '.number_format($totalHoldClaims, 0));
-//                Log::info('totalActiveClaims = '.number_format($totalActiveClaims, 0));
-
-                // If the student has reached the grant limit, prevent moving it to Hold
-                if (((float) $totalHoldClaims + (float) $totalActiveClaims) > (float) env('TOTAL_GRANT')) {
-                    $claim->process_feedback = 'Student total claims of Hold and Claimed, including this,
-                    is $'.(float) $totalHoldClaims + (float) $totalActiveClaims.' > $'.(float) env('TOTAL_GRANT').',
-                    student currently has $' . (float) $totalHoldClaims + (float) $totalActiveClaims - (float)$claim->estimated_hold_amount . ' in claimed and held.';
-                    $claim->claim_status = 'Submitted';
-                    $claim->estimated_hold_amount = 0;
-                }
-            }
-
-            // If the claim is moving from Hold to Claimed
-            elseif ($claim_before_update->claim_status === 'Hold' && $status === 'Claimed') {
-
-                Log::info('claim is moving from Hold to Claimed');
-
-                $checkStatus = true;
-                // Calculate sum claims of the institution that are not Draft, Cancelled or Expired
-                // We need the sum of claims that are Claimed
-                $sum_claims = Claim::where('claim_status', 'Claimed')
-                        ->where('institution_guid', $claim->institution_guid)
-                        ->where('allocation_guid', $claim->allocation_guid)
-                        ->sum(\DB::raw('COALESCE(program_fee, 0) + COALESCE(materials_fee, 0) + COALESCE(registration_fee, 0) + COALESCE(correction_amount, 0)'));
-
-//                Log::info('claims sum_claims = '.number_format($sum_claims, 0));
-//                Log::info('allocation total_amount = '.number_format($claim->allocation->total_amount, 0));
-
-                $total = (float) $sum_claims + ((float) $sum_claims / (float) $claim->py_admin_fee);
-                Log::info('total + admin fee = '.number_format($total, 0));
-
-                // Prevent inst. from switching to Claimed if the total of their claims is gte the allocation total
-                // Make sure all calculation to include admin fee. Allocation total is inclusive of the admin fee
-                if ($total > (float) $claim->allocation->total_amount) {
-                    Log::info('total + admin fee = '.number_format($total, 0) . ' > allocation total_amount = '.number_format((float) $claim->allocation->total_amount, 0));
-                    $claim->process_feedback = 'Institution has reached the total claim amount';
-                    $claim->claim_status = 'Hold';
-                    $claim->total_claim_amount = 0;
-                    $claim->program_fee = 0;
-                    $claim->materials_fee = 0;
-                    $claim->registration_fee = 0;
-                    $claim->correction_amount = 0;
-                    $checkStatus = false;
-                }
-
-                // Enforce the per-funding-type dollar cap defined on the allocation.
-                // Replaces the legacy ts_percent check: each allocation can now define one or many
-                // funding types, each with its own maximum dollar amount.
-                if ($checkStatus && !empty($claim->funding_type)) {
-                    $fundingTypeAllocation = AllocationFundingType::where('allocation_guid', $claim->allocation_guid)
-                        ->where('funding_type', $claim->funding_type)
-                        ->first();
-
-                    // Only enforce a cap when the allocation explicitly defines one for this funding type.
-                    if ($fundingTypeAllocation) {
-                        Log::info('checking funding type "'.$claim->funding_type.'" allocation limit');
-                        // Sum the Claimed claims of the institution for the same allocation and funding
-                        // type (the current claim is already saved as Claimed), then add the admin fee
-                        // so the comparison matches the allocation accounting.
-                        $sum_ft_claims = Claim::where('claim_status', 'Claimed')
-                                ->where('institution_guid', $claim->institution_guid)
-                                ->where('allocation_guid', $claim->allocation_guid)
-                                ->where('funding_type', $claim->funding_type)
-                                ->sum(\DB::raw('COALESCE(program_fee, 0) + COALESCE(materials_fee, 0) + COALESCE(registration_fee, 0) + COALESCE(correction_amount, 0)'));
-
-                        $ft_claims_total = (float) $sum_ft_claims + ((float) $sum_ft_claims / (float) $claim->py_admin_fee);
-                        Log::info('funding type claims total = '.number_format($ft_claims_total, 0));
-
-                        // If the funding type total exceeds its allocated dollar amount, set it to Hold
-                        if ($ft_claims_total > (float) $fundingTypeAllocation->amount) {
-
-                            Log::info('funding type total = '.number_format($ft_claims_total, 0) . ' > funding type allocation = '.number_format((float) $fundingTypeAllocation->amount, 0));
-                            $claim->process_feedback = 'Claim exceeds the "'.$claim->funding_type.'" funding type allocation limit.';
-                            $claim->claim_status = 'Hold';
-                            $claim->total_claim_amount = 0;
-                            $claim->program_fee = 0;
-                            $claim->materials_fee = 0;
-                            $claim->registration_fee = 0;
-                            $claim->correction_amount = 0;
-                            $checkStatus = false;
-                        }
-                    }
-                }
-
-                //check student
-                // Calculate the total of claims for the student that are in Hold
-//                $totalHoldClaims = $student->claims()
-//                    ->where('claim_status', 'Hold')
-//                    ->select('estimated_hold_amount')
-//                    ->pluck('estimated_hold_amount')
-//                    ->sum();
-
-                // Calculate the total of claims for the student excluding Draft, Hold, Expired
-                $totalActiveClaims = $student->claims()
-                    ->where('claim_status', 'Claimed')
-                    ->sum(\DB::raw('COALESCE(program_fee, 0) + COALESCE(materials_fee, 0) + COALESCE(registration_fee, 0) + COALESCE(correction_amount, 0)'));
-
-                // If the student has reached the grant limit, prevent moving it to Submitted
-                if ($checkStatus && (float) $totalActiveClaims > (float) env('TOTAL_GRANT')) {
-
-//                    Log::info('totalActiveClaims = '.(float) $totalActiveClaims);
-//                    Log::info('$claim->total_claim_amount = '.(float) $claim->total_claim_amount);
-//                    Log::info('TOTAL_GRANT = '.(float) env('TOTAL_GRANT'));
-
-                    $diff = (float) $totalActiveClaims - (float) env('TOTAL_GRANT');
-                    $claim->process_feedback = 'Student has exceeded the grant total amount by $' . $diff;
-                    $claim->claim_status = 'Hold';
-                    $claim->total_claim_amount = 0;
-                    $claim->program_fee = 0;
-                    $claim->materials_fee = 0;
-                    $claim->registration_fee = 0;
-                    $claim->correction_amount = 0;
-                    $checkStatus = false;
-                }
-            }
-
-            // If the claim is moving to Cancelled/Expired
-            elseif ($status === 'Cancelled' || $status === 'Expired') {
-
-                Log::info('claim is moving to Cancelled/Expired');
-                $claim->estimated_hold_amount = 0;
-                $claim->total_claim_amount = 0;
-                $claim->program_fee = 0;
-                $claim->materials_fee = 0;
-                $claim->registration_fee = 0;
-                $claim->claim_percent = 0;
-                $claim->correction_amount = 0;
+            if ($totalSeats > 0 && $committedCount > $totalSeats) {
+                $claim->process_feedback = 'Institution has reached the total claim amount';
+                $claim->claim_status = 'Submitted';
             }
         }
 

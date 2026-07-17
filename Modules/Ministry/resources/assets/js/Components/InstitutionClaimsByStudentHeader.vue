@@ -29,7 +29,7 @@
             </a>
         </th>
         <th scope="col" class="text-nowrap">
-                <span># Claims</span>
+                <span># Applications</span>
         </th>
         <th scope="col" class="text-nowrap">
             <a href="#" @click="switchSort('created_at')">

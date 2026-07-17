@@ -2,9 +2,6 @@
 
 namespace App\Jobs;
 
-use App\Events\ClaimSubmitted;
-use App\Models\Claim;
-use Carbon\Carbon;
 use Illuminate\Bus\Queueable;
 use Illuminate\Contracts\Queue\ShouldQueue;
 use Illuminate\Foundation\Bus\Dispatchable;
@@ -29,15 +26,9 @@ class MidnightJob implements ShouldQueue
     public function handle(): void
     {
         \Log::info('Midnight Job Started');
-        $claims = Claim::where('claim_status', 'Hold')
-            ->where('expiry_date', '<', Carbon::now())
-            ->get();
-        foreach ($claims as $claim) {
-            $claim->update(['claim_status' => 'Expired']);
-            $updatedClaim = Claim::where('id', $claim->id)->first();
-            event(new ClaimSubmitted($updatedClaim, 'Expired'));
-            \Log::info('Claim ID: '.$claim->id.' expired.');
-        }
+
+        // Automatic claim expiry was removed together with the expiry_date column.
+        // Claim amounts are now derived from the allocation, so holds no longer expire.
 
         \Log::info('Midnight Job Finished');
 

@@ -12,7 +12,7 @@
                                 Student Menu
                             </div>
                             <div class="card-body">
-                                <StudentMenu :page="page" :id="results.id" :first_name="results.first_name" :last_name="results.last_name" />
+                                <StudentMenu :page="page" :id="results.guid" :first_name="results.first_name" :last_name="results.last_name" />
                             </div>
                         </div>
                     </div>

@@ -6,6 +6,7 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\InstitutionEditRequest;
 use App\Models\Institution;
 use App\Models\Program;
+use App\Models\ProgramOffering;
 use App\Models\ProgramYear;
 use App\Services\PdexService;
 use Illuminate\Http\RedirectResponse;
@@ -40,8 +41,8 @@ class InstitutionController extends Controller
         $guid = $institution->guid;
 
         $institution = Institution::where('id', $institution->id)->with(
-            ['allocations.py', 'allocations.fundingTypes', 'activeAllocation', 'activeAllocation.fundingTypes', 'staff.user.roles',]
-        )->first();
+            ['staff.user.roles', 'offerings.program', 'offerings.py']
+        )->withCount(['claims', 'offerings', 'staff'])->first();
 
         $countries = $this->pdex->countries();
         $program_years = Cache::remember('program_years_ministry', 380, function () {
@@ -66,7 +67,16 @@ class InstitutionController extends Controller
      */
     public function update(InstitutionEditRequest $request): RedirectResponse
     {
-        Institution::where('id', $request->id)->update($request->validated());
+        $institution = Institution::where('id', $request->id)->first();
+
+        $institution->update($request->safe()->except('last_touch_by_user_guid'));
+
+        // Deactivating an institution cascades to all of its offerings.
+        if (! $institution->active_status) {
+            ProgramOffering::where('institution_guid', $institution->guid)
+                ->where('active_status', true)
+                ->update(['active_status' => false]);
+        }
 
         return Redirect::route('ministry.institutions.show', [$request->id]);
     }
@@ -144,7 +154,7 @@ class InstitutionController extends Controller
 
     private function paginateInst()
     {
-        $institutions = Institution::with('activeAllocation');
+        $institutions = Institution::with('activeOfferings');
 
         if (request()->filter_name !== null) {
             $institutions = $institutions->where('name', 'ILIKE', '%'.request()->filter_name.'%');

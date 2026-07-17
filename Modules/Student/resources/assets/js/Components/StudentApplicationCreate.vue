@@ -2,7 +2,12 @@
     <form v-if="newApplicationForm != null" class="card-body">
         <div class="modal-body">
 
-            <ClaimProfileFields :form="newApplicationForm" :utils="$attrs.utils" :individual="individual" />
+            <div v-if="hasPrefill" class="alert alert-info d-flex justify-content-between align-items-center py-2">
+                <span>Verified applicant details are available from PDEX.</span>
+                <button @click="autofillFromPdex" type="button" class="btn btn-sm btn-outline-primary">Auto-fill from PDEX</button>
+            </div>
+
+            <ClaimProfileFields :form="newApplicationForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" />
 
             <div class="row g-3 mt-1">
                 <div class="col-12">
@@ -27,21 +32,9 @@
                     </Select>
                 </div>
 
-                <div v-if="newApplicationForm.program_guid != ''" class="col-12">
-                    <div class="form-check">
-                        <label for="flexCheckChecked1" class="form-check-label">
-                            {{ $attrs.utils['Student Agreement'][0].field_name }}
-                        </label>
-                        <input type="checkbox" class="form-check-input" id="flexCheckChecked1"
-                               v-model="newApplicationForm.agreement_confirmed" :checked="newApplicationForm.agreement_confirmed" />
-                    </div>
-                    <div class="form-check">
-                        <label for="flexCheckChecked2" class="form-check-label">
-                            {{ $attrs.utils['Student Registration Confirmation'][0].field_name }}
-                        </label>
-                        <input type="checkbox" class="form-check-input" id="flexCheckChecked2"
-                               v-model="newApplicationForm.registration_confirmed" :checked="newApplicationForm.registration_confirmed" />
-                    </div>
+                <div class="col-12">
+                    <Label for="inputApprenticeNumber" class="form-label" value="Apprentice Number"/>
+                    <input id="inputApprenticeNumber" type="text" class="form-control" v-model="newApplicationForm.apprentice_number" />
                 </div>
 
                 <div v-if="newApplicationForm.processing" class="text-center">
@@ -63,10 +56,10 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button @click="save" type="button" class="btn me-2 btn-primary" :disabled="newApplicationForm.processing ||
-            newApplicationForm.institution_guid == '' || newApplicationForm.program_guid == ''">Save Draft</button>
+            <button @click="save" type="button" class="btn me-2 btn-primary" :disabled="newApplicationForm.processing">Save Draft</button>
             <button @click="submitForm" type="button" class="btn btn-success" :disabled="newApplicationForm.processing ||
-            newApplicationForm.institution_guid == '' || newApplicationForm.program_guid == ''">
+            newApplicationForm.institution_guid == '' || newApplicationForm.program_guid == '' ||
+            !newApplicationForm.apprentice_number">
                 Submit Application
             </button>
         </div>
@@ -80,7 +73,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import ClaimProfileFields from './ClaimProfileFields.vue';
+import ClaimProfileFields from '@/Components/ClaimProfileFields.vue';
 import {Link, useForm} from '@inertiajs/vue3';
 
 export default {
@@ -104,60 +97,60 @@ export default {
                 // Program selection
                 institution_guid: "",
                 program_guid: "",
-                agreement_confirmed: false,
-                registration_confirmed: false,
+                apprentice_number: "",
                 claim_status: "Submitted",
 
                 // Applicant profile (captured on the claim)
                 first_name: "",
                 middle_name: "",
                 last_name: "",
-                sin: "",
-                dob: "",
-                email: "",
-                telephone: "",
+                social_insurance_number: "",
+                date_of_birth: "",
+                email_address: "",
+                phone_number: "",
                 address_line1: "",
                 address_line2: "",
                 city: "",
                 province: "",
+                region: "",
                 country: "Canada",
-                zip_code: "",
-                gender_identity: "",
+                postal_code: "",
+                gender: "",
                 marital_status: "",
                 number_of_dependants: "",
-                disability_status: "",
-                indigenous_identity: "",
+                disability_status: false,
+                indigenous_status: false,
+                indigenous_group: "",
                 immigration_status: "",
                 immigration_year: "",
                 visible_minority_status: "",
-                highest_education_level: "",
+                racial_identity: "",
+                is_visible_minority: false,
+                highest_level_of_education: "",
                 official_language_choice: "",
                 official_language_service: "",
                 employment_status_intake: "",
                 employment_status_exit: "",
                 precarious_employment: "",
-                intervention_name: "",
-                intervention_code: "",
-                intervention_start_date: "",
-                intervention_end_date: "",
                 intervention_outcome: "",
-                credential_earned: "",
-                noc_code: "",
-                naics_code: "",
-                action_plan_start_date: "",
-                action_plan_end_date: "",
-                action_plan_outcome: "",
-                action_plan_outcome_date: "",
-                literacy_essential_skills_increase: "",
             },
         }
     },
     computed: {
-        individual() {
-            return this.$attrs.individual_data?.individual ?? null;
+        // BCSC individual token data mapped to claim columns, used to prefill a new claim.
+        claimPrefill() {
+            return this.$attrs.claim_prefill ?? {};
+        },
+        // Whether any PDEX prefill data is available to offer auto-fill.
+        hasPrefill() {
+            return Object.keys(this.claimPrefill).length > 0;
         }
     },
     methods: {
+        // Populate the form with the BCSC individual token data (PDEX) on demand.
+        autofillFromPdex: function () {
+            Object.assign(this.newApplicationForm, this.claimPrefill);
+        },
         save: function () {
             this.newApplicationForm.claim_status = 'Draft';
             this.submitForm();
@@ -205,7 +198,8 @@ export default {
     },
 
     mounted() {
-        this.newApplicationForm = useForm(this.newApplicationFormData);
+        // Start with an empty form; PDEX data can be applied via the auto-fill option.
+        this.newApplicationForm = useForm({ ...this.newApplicationFormData });
     }
 }
 </script>

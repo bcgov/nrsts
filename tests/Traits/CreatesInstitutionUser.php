@@ -5,7 +5,7 @@ namespace Tests\Traits;
 use App\Models\Institution;
 use App\Models\InstitutionStaff;
 use App\Models\ProgramYear;
-use App\Models\Allocation;
+use App\Models\ProgramOffering;
 use App\Models\User;
 use App\Models\Role;
 
@@ -28,7 +28,7 @@ trait CreatesInstitutionUser
         ]);
 
         $programYear = ProgramYear::factory()->create();
-        Allocation::factory()->create([
+        ProgramOffering::factory()->create([
             'institution_guid'  => $institution->guid,
             'program_year_guid' => $programYear->guid,
         ]);

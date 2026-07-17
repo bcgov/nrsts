@@ -2,9 +2,9 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Allocation;
 use App\Models\Claim;
-use App\Rules\InstitutionAllocationReached;
+use App\Models\ProgramOffering;
+use App\Rules\OfferingSeatsReached;
 use App\Rules\ValidSin;
 use Carbon\Carbon;
 use Illuminate\Foundation\Http\FormRequest;
@@ -14,6 +14,29 @@ use Illuminate\Support\Str;
 class MinistryClaimEditRequest extends FormRequest
 {
     /**
+     * Allowed status transitions. Each key is the claim's current status and the
+     * value lists the statuses it may move to. This enforces the forward-only
+     * workflow: Submitted -> Hold -> Training Started -> (Completed | Dropped Out),
+     * with Declined reachable while the claim is still Submitted or on Hold. Any
+     * transition not listed here (including moving backward) is denied.
+     */
+    private const CLAIM_TRANSITIONS = [
+        'Submitted' => ['Hold', 'Declined'],
+        'Hold' => ['Training Started', 'Declined'],
+        'Training Started' => ['Completed', 'Dropped Out'],
+    ];
+
+    /**
+     * Statuses that require a reason recorded in outcome_status.
+     */
+    private const REASON_REQUIRED_STATUSES = ['Declined', 'Dropped Out'];
+
+    /**
+     * Terminal statuses that can no longer be modified.
+     */
+    private const TERMINAL_STATUSES = ['Completed', 'Declined', 'Dropped Out', 'Cancelled', 'Expired'];
+
+    /**
      * Determine if the user is authorized to make this request.
      *
      * @return bool
@@ -22,46 +45,63 @@ class MinistryClaimEditRequest extends FormRequest
     {
         $claim = Claim::find($this->id);
 
-//        Log::info("ClaimEditRequest - Claim Status: $claim->claim_status");
-
         if (! $claim) {
-            return false; // Claim not found
-        }
-
-        // Prevent updates if the current claim_status is "Claimed"
-        if ($claim->claim_status === 'Claimed' && $claim->outcome_effective_date != null && $claim->outcome_status != null) {
+            Log::warning('MinistryClaimEditRequest authorization failed: Claim not found', [
+                'claim_id' => $this->id,
+                'user_id' => $this->user()?->id,
+            ]);
             return false;
         }
 
-        // Prevent updates if the current claim_status is not "Claimed" and the claim allocation is not active
-        // This is to prevent updates to claims that are not in an active allocation
-        // AND are not in "Claimed" status
-        // ** Institutions are not allowed to update this, only Ministry users can update claims
-        if ($claim->claim_status !== 'Claimed' && $claim->allocation->status !== 'active') {
-            // return false;
-        }
+        $current = $claim->claim_status;
+        $target = $this->claim_status;
 
-        // Prevent updates if the current claim_status is "Claimed" and already got correction
-        if ($claim->claim_status === 'Claimed' && $claim->correction != null) {
+        // Terminal claims can no longer be actioned.
+        if (in_array($current, self::TERMINAL_STATUSES, true)) {
+            Log::warning('MinistryClaimEditRequest authorization failed: Claim in terminal status', [
+                'claim_id' => $claim->id,
+                'claim_status' => $current,
+                'user_id' => $this->user()?->id,
+            ]);
             return false;
         }
 
-        // Allow switching to Cancelled only if claim is in Hold status and stable enrol. date is yet to come
-        //        if ($this->claim_status === 'Cancelled' && $claim->claim_status !== 'Hold') {
-        //            return false;
-        //        }
-        //        if ($this->claim_status === 'Cancelled' && $claim->claim_status === 'Hold') {
-        // Robyn said remove this.
-        //            if($claim->stable_enrolment_date < Carbon::now()) {
-        //                return false;
-        //            }
-        //        }
-        if ($this->claim_status === 'Cancelled' && ($claim->claim_status == 'Draft' || $claim->claim_status == 'Expired')) {
+        // The claim's offering must be active to be actioned.
+        if (! ($claim->offering && $claim->offering->active_status)) {
+            Log::warning('MinistryClaimEditRequest authorization failed: Offering not active', [
+                'claim_id' => $claim->id,
+                'claim_status' => $current,
+                'offering_active_status' => $claim->offering?->active_status,
+                'user_id' => $this->user()?->id,
+            ]);
             return false;
         }
 
-        // Check if the authenticated user has the necessary permissions to edit the institution.
-        // You can access the authenticated user using the Auth facade or $this->user() method.
+        // Only forward transitions defined in the workflow map are allowed. This
+        // prevents moving the status backward or skipping steps.
+        if (! is_null($target) && $target !== $current) {
+            $allowed = self::CLAIM_TRANSITIONS[$current] ?? [];
+            if (! in_array($target, $allowed, true)) {
+                Log::warning('MinistryClaimEditRequest authorization failed: Invalid status transition', [
+                    'claim_id' => $claim->id,
+                    'from' => $current,
+                    'to' => $target,
+                    'user_id' => $this->user()?->id,
+                ]);
+                return false;
+            }
+        }
+
+        // The submitted program can never be changed.
+        if ($this->has('program_guid') && $this->input('program_guid') != $claim->program_guid) {
+            Log::warning('MinistryClaimEditRequest authorization failed: Cannot change the submitted program', [
+                'claim_id' => $claim->id,
+                'claim_status' => $current,
+                'user_id' => $this->user()?->id,
+            ]);
+            return false;
+        }
+
         return $this->user()->can('update', $claim);
     }
 
@@ -73,10 +113,8 @@ class MinistryClaimEditRequest extends FormRequest
     public function messages()
     {
         return [
-            'dob.*' => 'The Date of Birth field is invalid.',
-            'estimated_hold_amount.*' => 'The Est. Hold Amount field is invalid.',
-            'stable_enrolment_date.*' => 'The Actual Stable Enrol. Date field is invalid.',
-            'expected_stable_enrolment_date.*' => 'The Expected Stable Enrol. Date field is invalid.',
+            'date_of_birth.*' => 'The Date of Birth field is invalid.',
+            'outcome_status.required' => 'A reason is required in the outcome status for this action.',
         ];
     }
 
@@ -90,99 +128,15 @@ class MinistryClaimEditRequest extends FormRequest
         $rules = [
             'id' => 'required',
             'guid' => 'required',
-            'program_guid' => 'required|exists:programs,guid',
             'claim_status' => 'required|string',
-            'stable_enrolment_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-            'expected_stable_enrolment_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-            'expected_completion_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-            'outcome_effective_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
+            'program_guid' => 'nullable|exists:programs,guid',
             'outcome_status' => 'nullable|string',
-            'correction_amount' => 'nullable|numeric',
-            'correction_comment' => 'required_if:correction_amount,!null',
-
+            'ei_reference_code' => 'nullable|string',
         ];
 
-        // If the status is "Cancelled" or 'Expired', do not validate other fields
-        if ($this->claim_status === 'Cancelled' || $this->claim_status === 'Expired') {
-            return $rules;
-        }
-
-        if ($this->claim_status === 'Draft') {
-            $rules = array_merge($rules, [
-                'institution_guid' => 'required|exists:institutions,guid',
-                'allocation_guid' => 'required|exists:allocations,guid',
-                'program_guid' => 'required|exists:programs,guid',
-                'user_guid' => 'required|exists:users,guid',
-
-                'sin' => ['required', new ValidSin],
-                'first_name' => 'required|string',
-                'last_name' => 'required|string',
-                'dob' => 'required|date_format:Y-m-d',
-                'email' => 'required|email',
-                'city' => 'required|string',
-                'zip_code' => 'required|string|regex:/^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/',
-                'agreement_confirmed' => 'required|boolean',
-                'registration_confirmed' => 'required|boolean',
-            ]);
-        } elseif ($this->claim_status === 'Submitted') {
-            $rules = array_merge($rules, [
-                'registration_fee' => 'nullable|numeric',
-                'materials_fee' => 'nullable|numeric',
-                'program_fee' => 'nullable|numeric',
-                'estimated_hold_amount' => 'required|numeric|gte:0',
-                'total_claim_amount' => 'nullable|numeric',
-                'claim_percent' => 'required|numeric',
-                'stable_enrolment_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-                'expected_stable_enrolment_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-                'expiry_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-
-                'fifty_two_week_affirmation' => 'required|boolean|in:true,1',
-                'agreement_confirmed' => 'required|boolean|in:true,1',
-                'registration_confirmed' => 'required|boolean|in:true,1',
-
-            ]);
-        } elseif ($this->claim_status === 'Hold') {
-            $rules = array_merge($rules, [
-                'registration_fee' => 'nullable|numeric',
-                'materials_fee' => 'nullable|numeric',
-                'program_fee' => 'nullable|numeric',
-                'estimated_hold_amount' => 'required|numeric|gte:0',
-                'total_claim_amount' => 'nullable|numeric',
-                'claim_percent' => 'required|numeric',
-                'stable_enrolment_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-                'expected_stable_enrolment_date' => 'required|date_format:Y-m-d|after:2020-01-20',
-                'expiry_date' => 'required|date_format:Y-m-d|after:2020-01-20',
-
-                'fifty_two_week_affirmation' => 'required|boolean|in:true,1',
-                'agreement_confirmed' => 'required|boolean|in:true,1',
-                'registration_confirmed' => 'required|boolean|in:true,1',
-
-            ]);
-        } elseif ($this->claim_status === 'Claimed') {
-
-            $allocation = Allocation::where('guid', $this->input('allocation_guid'))->with('institution')->first();
-
-            $rules = array_merge($rules, [
-                'allocation_limit_reached' => ['required', new InstitutionAllocationReached($allocation)],
-                'registration_fee' => 'required|numeric',
-                'materials_fee' => 'required|numeric',
-                'program_fee' => 'required|numeric',
-                'estimated_hold_amount' => 'required|numeric',
-                'total_claim_amount' => 'required|numeric',
-                'claim_percent' => 'required|numeric',
-                'stable_enrolment_date' => 'required|date_format:Y-m-d|after:2020-01-20',
-                'expected_stable_enrolment_date' => 'required|date_format:Y-m-d|after:2020-01-20',
-                'expiry_date' => 'required|date_format:Y-m-d|after:2020-01-20',
-
-                'fifty_two_week_affirmation' => 'required|boolean|in:true,1',
-                'agreement_confirmed' => 'required|boolean|in:true,1',
-                'registration_confirmed' => 'required|boolean|in:true,1',
-
-                'psi_claim_request_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-                'reporting_completed_date' => 'nullable|date_format:Y-m-d|after:2020-01-20',
-                'claimed_date' => 'required|date_format:Y-m-d|after:2020-01-20',
-                'claimed_by_user_guid' => 'required|exists:users,guid',
-            ]);
+        // Declined and Dropped Out require a reason.
+        if (in_array($this->claim_status, self::REASON_REQUIRED_STATUSES, true)) {
+            $rules['outcome_status'] = 'required|string';
         }
 
         return $rules;
@@ -195,51 +149,8 @@ class MinistryClaimEditRequest extends FormRequest
      */
     protected function prepareForValidation()
     {
-        // If the status is "Cancelled", do not modify any other fields
-        if ($this->claim_status === 'Cancelled' || $this->claim_status === 'Expired') {
-            return;
-        }
-
-        // Sanitize and cast the fee fields to numeric values
-        $registrationFee = $this->sanitizeAndConvertToFloat($this->input('registration_fee'));
-        $materialsFee = $this->sanitizeAndConvertToFloat($this->input('materials_fee'));
-        $programFee = $this->sanitizeAndConvertToFloat($this->input('program_fee'));
-        $correction = $this->sanitizeAndConvertToFloat($this->input('correction_amount'));
-
-        $this->merge([
-            'agreement_confirmed' => $this->toBoolean($this->agreement_confirmed),
-            'registration_confirmed' => $this->toBoolean($this->registration_confirmed),
-        ]);
-
-        if ($this->claim_status === 'Draft') {
-            $this->merge([
-                'first_name' => Str::title($this->first_name),
-                'last_name' => Str::title($this->last_name),
-                'email' => Str::lower(str_replace(' ', '', $this->email)),
-                'zip_code' => Str::upper(str_replace(' ', '', $this->zip_code)),
-                'city' => Str::title($this->city),
-            ]);
-        } elseif ($this->claim_status === 'Submitted') {
-            $this->merge([
-                'fifty_two_week_affirmation' => $this->toBoolean($this->fifty_two_week_affirmation),
-            ]);
-        } elseif ($this->claim_status === 'Hold') {
-            $this->merge([
-                'fifty_two_week_affirmation' => $this->toBoolean($this->fifty_two_week_affirmation),
-            ]);
-        } elseif ($this->claim_status === 'Claimed') {
-
-            $today = Carbon::now()->startOfDay()->format('Y-m-d');
-
-            // Calculate the total
-            $total = $registrationFee + $materialsFee + $programFee + $correction;
-
-            $this->merge([
-                'total_claim_amount' => $total,
-                'claimed_date' => $today,
-                'claimed_by_user_guid' => $this->user()->guid,
-                'allocation_limit_reached' => true,
-            ]);
+        if ($this->has('outcome_status') && is_string($this->outcome_status)) {
+            $this->merge(['outcome_status' => trim($this->outcome_status)]);
         }
     }
 

@@ -2,8 +2,8 @@
 
 namespace Tests\Feature\Student;
 
-use App\Models\Allocation;
 use App\Models\Institution;
+use App\Models\ProgramOffering;
 use App\Models\User;
 use Illuminate\Foundation\Testing\RefreshDatabase;
 use Inertia\Testing\AssertableInertia as Assert;
@@ -43,9 +43,9 @@ class StudentControllerTest extends TestCase
         $this->actingAs($this->user);
 
         $institution = Institution::factory()->create();
-        $allocation = Allocation::factory()->create([
+        ProgramOffering::factory()->create([
             'institution_guid' => $institution->guid,
-            'status'           => 'active',
+            'active_status'    => true,
         ]);
 
         // Fetch a specific institution.

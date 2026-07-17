@@ -10,7 +10,6 @@ use App\Http\Requests\ProgramYearEditRequest;
 use App\Http\Requests\ProgramYearStoreRequest;
 use App\Http\Requests\UtilEditRequest;
 use App\Http\Requests\UtilStoreRequest;
-use App\Models\Allocation;
 use App\Models\Claim;
 use App\Models\Faq;
 use App\Models\Institution;

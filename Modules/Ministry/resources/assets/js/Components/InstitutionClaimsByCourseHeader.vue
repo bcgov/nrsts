@@ -22,25 +22,10 @@
             </a>
         </th>
         <th scope="col" class="text-nowrap">
-            <a href="#" @click="switchSort('course_name')">
-                <span>Program Name</span>
-                <em v-if="sortClmn === 'course_name' && sortType === 'desc'" class="bi bi-sort-alpha-up"></em>
-                <em v-else class="bi bi-sort-alpha-down"></em>
-            </a>
+            <span>Program Name</span>
         </th>
         <th scope="col" class="text-nowrap">
-            <a href="#" @click="switchSort('estimated_hold_amount')">
-                <span title="Estimated Hold + Admin Fee">Est. Hold incl. fee</span>
-                <em v-if="sortClmn === 'estimated_hold_amount' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
-                <em v-else class="bi bi bi-sort-numeric-down"></em>
-            </a>
-        </th>
-        <th scope="col" class="text-nowrap">
-            <a href="#" @click="switchSort('total_claim_amount')">
-                <span>Claim Total</span>
-                <em v-if="sortClmn === 'total_claim_amount' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
-                <em v-else class="bi bi bi-sort-numeric-down"></em>
-            </a>
+            <span>Claim Total</span>
         </th>
 <!--        <th scope="col" class="text-nowrap">-->
 <!--            <span>Student Claims</span>-->

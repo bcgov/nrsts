@@ -11,9 +11,6 @@
             <span>Program Year</span>
         </th>
         <th scope="col" class="text-nowrap">
-            <span>Estimated Hold</span>
-        </th>
-        <th scope="col" class="text-nowrap">
             <span>Claim Total</span>
         </th>
 <!--        <th scope="col" class="text-nowrap">-->

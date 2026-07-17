@@ -3,18 +3,19 @@
         <div class="modal-body">
             <div class="row g-3">
 
-                <ClaimProfileFields :form="newApplicationForm" :utils="$attrs.utils" :individual="individual" />
+                <ClaimProfileFields :form="newApplicationForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" />
 
-                <div v-if="programs != null && programs.length > 0" class="row col-12 g-3 mt-0">
+                <div v-if="institutions != null && institutions.length > 0" class="row col-12 g-3 mt-0">
                     <div class="col-12">
                         <Label for="inputInstGuid" class="form-label" value="Institution Name"/>
-                        <Select @change="fetchPrograms($event)" v-if="institutions != null && institutions.length > 0" class="form-select" id="inputInstGuid" v-model="newApplicationForm.institution_guid">
+                        <Select @change="fetchPrograms($event)" class="form-select" id="inputInstGuid" v-model="newApplicationForm.institution_guid">
+                            <option value=""></option>
                             <template  v-for="p in institutions">
                                 <option v-if="p.active_status === true" :value="p.guid">{{ p.name }}</option>
                             </template>
                         </Select>
                     </div>
-                    <div class="col-12">
+                    <div v-if="programs != null && programs.length > 0" class="col-12">
                         <Label for="inputProgramGuid" class="form-label" value="Program Name"/>
                         <Select class="form-select" id="inputProgramGuid" v-model="newApplicationForm.program_guid">
                             <option></option>
@@ -23,24 +24,12 @@
                             </template>
                         </Select>
                     </div>
-                    
-                    <div v-if="newApplicationForm.program_guid != ''" class="col-12">
-                        <div class="form-check">
-                            <label for="flexCheckChecked1" class="form-check-label">
-                                {{ $attrs.utils['Student Agreement'][0].field_name }}
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="flexCheckChecked1"
-                                   v-model="newApplicationForm.agreement_confirmed" :checked="newApplicationForm.agreement_confirmed" />
-                        </div>
-                        <div class="form-check">
-                            <label for="flexCheckChecked2" class="form-check-label">
-                                {{ $attrs.utils['Student Registration Confirmation'][0].field_name }}
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="flexCheckChecked2"
-                                   v-model="newApplicationForm.registration_confirmed" :checked="newApplicationForm.registration_confirmed" />
-                        </div>
-                    </div>
 
+                    <div class="col-12">
+                        <Label for="inputApprenticeNumber" class="form-label" value="Apprentice Number"/>
+                        <input id="inputApprenticeNumber" type="text" class="form-control" v-model="newApplicationForm.apprentice_number" />
+                    </div>
+                    
                     <div v-if="newApplicationForm.processing" class="text-center">
                         <div class="spinner-border" role="status">
                             <span class="visually-hidden">Loading...</span>
@@ -71,7 +60,8 @@
             <button @click="save" type="button" class="btn me-2 btn-primary" :disabled="newApplicationForm.processing ||
             newApplicationForm.institution_guid == '' || newApplicationForm.program_guid == ''">Save Draft</button>
             <button @click="submitForm" type="button" class="btn btn-success" :disabled="newApplicationForm.processing ||
-            newApplicationForm.institution_guid == '' || newApplicationForm.program_guid == ''">
+            newApplicationForm.institution_guid == '' || newApplicationForm.program_guid == '' ||
+            !newApplicationForm.apprentice_number">
                 Submit Application
             </button>
         </div>
@@ -85,7 +75,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import ClaimProfileFields from './ClaimProfileFields.vue';
+import ClaimProfileFields from '@/Components/ClaimProfileFields.vue';
 import {Link, useForm} from '@inertiajs/vue3';
 
 export default {
@@ -98,11 +88,6 @@ export default {
         application: Object,
         institutions: Object
     },
-    computed: {
-        individual() {
-            return this.$attrs.individual_data?.individual ?? null;
-        }
-    },
     data() {
         return {
 
@@ -114,8 +99,6 @@ export default {
                 formFailMsg: 'There was an error submitting this form.',
                 institution_guid: "",
                 program_guid: "",
-                agreement_confirmed: false,
-                registration_confirmed: false,
                 claim_status: "Submitted"
             },
         }
@@ -174,8 +157,12 @@ export default {
     mounted() {
         this.newApplicationForm = useForm(this.application);
         this.newApplicationForm.claim_status = 'Submitted';
-        
-        this.fetchPrograms(this.application.institution_guid);
+
+        if (this.application.institution_guid) {
+            this.fetchPrograms(this.application.institution_guid);
+        } else {
+            this.programs = [];
+        }
         // this.newApplicationForm.institution_guid = this.results.guid;
     }
 }

@@ -19,15 +19,17 @@
                         <tr v-if="row !== null">
                             <td><a href="#" @click="openEditForm(row)">{{ row.program.program_name }}</a></td>
                             <td>{{ row.institution.name }}</td>
-                            <td>${{ row.total_claim_amount }}
-                                <span v-if="row.correction_amount > 0 || row.correction_amount < 0" style="color: red;">*</span>
-                            </td>
+                            <td>${{ row.total_claim_amount }}</td>
 
                             <td>
                                 <span v-if="row.claim_status === 'Draft'" class="badge rounded-pill text-bg-info">Draft</span>
                                 <span v-else-if="row.claim_status === 'Submitted'" class="badge rounded-pill text-bg-primary">Submitted</span>
-                                <span v-else-if="row.claim_status === 'Hold'" class="badge rounded-pill text-bg-warning">Hold</span>
-                                <span v-else-if="row.claim_status === 'Claimed'" class="badge rounded-pill text-bg-success">Claimed</span>
+                                <span v-else-if="row.claim_status === 'EI Confirmed'" class="badge rounded-pill text-bg-success">EI Confirmed</span>
+                                <span v-else-if="row.claim_status === 'EI Not Confirmed'" class="badge rounded-pill text-bg-danger">EI Not Confirmed</span>
+                                <span v-else-if="row.claim_status === 'Training Started'" class="badge rounded-pill text-bg-warning">Training Started</span>
+                                <span v-else-if="row.claim_status === 'Training Ended'" class="badge rounded-pill text-bg-warning">Training Ended</span>
+                                <span v-else-if="row.claim_status === 'Completed'" class="badge rounded-pill text-bg-success">Completed</span>
+                                <span v-else-if="row.claim_status === 'Expired'" class="badge rounded-pill text-bg-danger">Expired</span>
                                 <span v-else class="badge rounded-pill text-bg-secondary">{{ row.claim_status }}</span>
                             </td>
                             <td>{{ formatDate(row.created_at) }}</td>
@@ -49,7 +51,7 @@
         </div>
 
 
-            <div v-if="editApplication == ''" class="modal modal-lg fade" id="newApplicationModal" tabindex="-1"
+            <div v-if="editApplication == ''" class="modal modal-xl fade" id="newApplicationModal" tabindex="-1"
                  aria-labelledby="newApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog">
                     <div class="modal-content">
@@ -61,7 +63,7 @@
                     </div>
                 </div>
             </div>
-            <div v-if="editApplication != ''" class="modal modal-lg fade" id="editApplicationModal" tabindex="0"
+            <div v-if="editApplication != ''" class="modal modal-xl fade" id="editApplicationModal" tabindex="0"
                  aria-labelledby="editApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
                 <div class="modal-dialog">
                     <div class="modal-content">

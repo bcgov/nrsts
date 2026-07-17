@@ -1,5 +1,5 @@
 <template>
-    <Head title="Claims"/>
+    <Head title="Applications"/>
 
     <AuthenticatedLayout v-bind="$attrs">
 
@@ -8,7 +8,7 @@
                 <div class="col-md-3">
                     <div class="card">
                         <div class="card-header">
-                            Claims Search
+                            Applications Search
                         </div>
                         <div class="card-body">
                             <ClaimSearchBox v-bind="$attrs" />
@@ -18,7 +18,7 @@
                 <div class="col-md-9">
                     <div class="card mb-3">
                         <div class="card-header">
-                            Student Claims
+                            Student Applications
                             <a href="/institution/claims/export" target="_blank" class="btn btn-outline-success btn-sm float-end" title="Export Claims"><i class="bi bi-filetype-csv"></i></a>
                         </div>
                         <div class="card-body">
@@ -30,16 +30,10 @@
                                     <tbody>
                                     <template v-for="(row, i) in claimList">
                                         <tr v-if="row !== null">
-                                            <td><a href="#" @click="openEditForm(row)">{{ row.sin ?? 0 }}</a></td>
+                                            <td><a href="#" @click="openEditForm(row)">{{ row.social_insurance_number ?? 0 }}</a></td>
                                             <td>{{ row.first_name }}</td>
                                             <td><Link :href="'/institution/students/' + row.user_guid">{{ row.last_name }}</Link></td>
-                                            <td>{{ row.program.program_name }}</td>
-                                            <td>${{ $amountPlusPyFee(row.estimated_hold_amount, row.py_admin_fee) }}</td>
-                                            <td>${{ $amountPlusPyFee(parseFloat(row.registration_fee) + parseFloat(row.materials_fee) + parseFloat(row.program_fee) + parseFloat(row.correction_amount), row.py_admin_fee) }}
-                                                <span v-if="row.correction_amount > 0 || row.correction_amount < 0" style="color: red;">*</span>
-                                            </td>
-
-                                            <!--                                            <td>${{ row.student.total_grant }}</td>-->
+                                            <td>{{ row.program?.program_name ?? '—' }}</td>
                                             <td>
                                                 <p v-if="row.claim_status === 'Draft'" class="badge rounded-pill text-bg-info">Draft<span v-if="row.process_feedback != null" class="badge rounded-pill text-bg-danger ms-1">!</span></p>
                                                 <p v-else-if="row.claim_status === 'Submitted'" class="badge rounded-pill text-bg-primary">Submitted<span v-if="row.process_feedback != null" class="badge rounded-pill text-bg-danger ms-1">!</span></p>
@@ -61,7 +55,6 @@
                                     </tbody>
 
                                 </table>
-                                <small v-if="claimList != ''" class="text-danger">* Includes {{ claimList[0].py_admin_fee }}% Administration Fee</small>
                                 <Pagination :links="results.links" :active-page="results.current_page" :sort-by="sortBy" :sort-dir="sortDir" />
                             </div>
                             <h1 v-else class="lead">No results</h1>
@@ -111,7 +104,7 @@ export default {
     props: {
         results: Object,
         institution: Object,
-        allocation: Object,
+        offering: Object,
         countries: Object,
         error: String|null,
     },

@@ -27,18 +27,11 @@ class ProgramStoreRequest extends FormRequest
             'guid' => 'required',
             'institution_guid' => 'required|exists:institutions,guid',
             'program_name' => 'required',
-            'delivery_method' => 'required',
-            'online_delivery_type' => 'required',
-            'credential_type' => 'required',
-            'micro_credential_type' => 'nullable',
-            'high_priority_industry' => 'required',
+            'category' => 'nullable',
+            'number_weeks' => 'required|integer|min:1',
+            'number_levels' => 'required|integer|min:0',
             'funding_type' => 'required|exists:utils,field_name',
 
-            'creditable' => 'required|boolean',
-            'full_time' => 'required|boolean',
-            'prov_funded_micro_cred' => 'required|boolean',
-            'indigenous_related_learning' => 'required|boolean',
-            'diversity_inclusion_related_learning' => 'required|boolean',
             'active_status' => 'required|boolean',
 
             'last_touch_by_user_guid' => 'required|exists:users,guid',
@@ -51,15 +44,12 @@ class ProgramStoreRequest extends FormRequest
         return [
             'institution_guid.required' => 'Institution is required',
             'program_name.required' => 'Program name is required',
-            'delivery_method.required' => 'Delivery method is required',
-            'online_delivery_type.required' => 'Online delivery method is required',
-            'credential_type.required' => 'Credential type is required',
-            'high_priority_industry.required' => 'High priority industry is required',
-            //            'start_date.required' => 'Start date is required',
-            //            'end_date.required' => 'End date is required',
-            'creditable.required' => 'Creditable is required',
-            'full_time.required' => 'Full time is required',
-
+            'number_weeks.required' => 'Number of weeks is required',
+            'number_weeks.integer' => 'Number of weeks must be a whole number',
+            'number_weeks.min' => 'Number of weeks must be greater than 0',
+            'number_levels.required' => 'Number of levels is required',
+            'number_levels.integer' => 'Number of levels must be a whole number',
+            'number_levels.min' => 'Number of levels cannot be negative',
         ];
     }
 
@@ -74,11 +64,6 @@ class ProgramStoreRequest extends FormRequest
             'guid' => Str::orderedUuid()->getHex(),
 
             'active_status' => $this->toBoolean($this->active_status),
-            'creditable' => $this->toBoolean($this->creditable),
-            'full_time' => $this->toBoolean($this->full_time),
-            'prov_funded_micro_cred' => $this->toBoolean($this->prov_funded_micro_cred),
-            'indigenous_related_learning' => $this->toBoolean($this->indigenous_related_learning),
-            'diversity_inclusion_related_learning' => $this->toBoolean($this->diversity_inclusion_related_learning),
 
             'last_touch_by_user_guid' => $this->user()->guid,
         ]);

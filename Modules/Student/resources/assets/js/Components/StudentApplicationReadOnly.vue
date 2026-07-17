@@ -3,7 +3,7 @@
         <div class="modal-body">
             <div v-if="programs != null && programs.length > 0" class="row g-3">
 
-                <ClaimProfileFields :form="newApplicationForm" :utils="$attrs.utils" readonly />
+                <ClaimProfileFields :form="newApplicationForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" readonly />
 
                 <div class="row col-12 g-3 mt-0">
                     <div class="col-12">
@@ -24,21 +24,37 @@
                         </Select>
                     </div>
                     
-                    <div v-if="newApplicationForm.program_guid != ''" class="col-12">
-                        <div class="form-check">
-                            <label for="flexCheckChecked1" class="form-check-label">
-                                {{ $attrs.utils['Student Agreement'][0].field_name }}
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="flexCheckChecked1"
-                                   v-model="newApplicationForm.agreement_confirmed" :checked="newApplicationForm.agreement_confirmed"  readonly="readonly" disabled/>
+                    <div class="col-12">
+                        <Label for="inputApprenticeNumber" class="form-label" value="Apprentice Number"/>
+                        <input id="inputApprenticeNumber" type="text" class="form-control" v-model="application.apprentice_number" readonly="readonly" disabled />
+                    </div>
+
+                    <div v-if="application.ei_reference_code" class="col-12">
+                        <Label for="inputEiRef" class="form-label" value="EI Reference Code"/>
+                        <Input type="text" class="form-control" id="inputEiRef" :value="application.ei_reference_code" readonly="readonly" disabled/>
+                    </div>
+
+                    <!-- Training Ended flow: the learner reports their exit employment status -->
+                    <div v-if="application.claim_status === 'Training Started'" class="col-12">
+                        <div class="alert alert-info">
+                            <div class="form-check">
+                                <input id="pf_end_training" type="checkbox" class="form-check-input" v-model="endingTraining" />
+                                <label class="form-check-label" for="pf_end_training">I have completed my training</label>
+                            </div>
+                            <div v-if="endingTraining" class="row g-3 mt-1">
+                                <div class="col-md-6">
+                                    <label class="form-label" for="pf_exit_status">Employment Status (Exit)</label>
+                                    <select id="pf_exit_status" class="form-select" v-model="exitEmploymentStatus">
+                                        <option value=""></option>
+                                        <option v-for="opt in exitOptions" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
+                                    </select>
+                                </div>
+                            </div>
                         </div>
-                        <div class="form-check">
-                            <label for="flexCheckChecked2" class="form-check-label">
-                                {{ $attrs.utils['Student Registration Confirmation'][0].field_name }}
-                            </label>
-                            <input type="checkbox" class="form-check-input" id="flexCheckChecked2"
-                                   v-model="newApplicationForm.registration_confirmed" :checked="newApplicationForm.registration_confirmed"  readonly="readonly" disabled/>
-                        </div>
+                    </div>
+
+                    <div v-if="transitionError" class="col-12">
+                        <div class="alert alert-danger">{{ transitionError }}</div>
                     </div>
 
                     <div v-if="newApplicationForm.processing" class="text-center">
@@ -67,6 +83,9 @@
             </div>
         </div>
         <div class="modal-footer">
+            <button v-if="application.claim_status === 'Training Started' && endingTraining" type="button" class="btn btn-primary" :disabled="transitioning" @click="endTraining">
+                End Training
+            </button>
             <button type="button" class="btn btn-secondary" data-bs-dismiss="modal" aria-label="Close">Close</button>
 
         </div>
@@ -78,7 +97,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import ClaimProfileFields from './ClaimProfileFields.vue';
+import ClaimProfileFields from '@/Components/ClaimProfileFields.vue';
 import {Link, useForm} from '@inertiajs/vue3';
 
 export default {
@@ -96,19 +115,73 @@ export default {
 
             programs: null,
             newApplicationForm: null,
+            endingTraining: false,
+            exitEmploymentStatus: '',
+            transitioning: false,
+            transitionError: '',
             newApplicationFormData: {
                 formState: true,
                 formSuccessMsg: 'Form was submitted successfully.',
                 formFailMsg: 'There was an error submitting this form.',
                 institution_guid: "",
                 program_guid: "",
-                agreement_confirmed: false,
-                registration_confirmed: false,
                 claim_status: "Submitted"
             },
         }
     },
+    computed: {
+        
+        exitOptions() {
+            const studentUtils = this.$attrs.studentUtils;
+            return (studentUtils && studentUtils.options && studentUtils.options.employment_status) || [];
+        },
+    },
     methods: {
+
+        startApprenticeProgram: function () {
+            let vm = this;
+            this.transitionError = '';
+            this.transitioning = true;
+            this.$inertia.put('/student/applications/transition', {
+                id: this.application.id,
+                claim_status: 'Training Started',
+            }, {
+                preserveScroll: true,
+                onSuccess: function () {
+                    vm.transitioning = false;
+                    vm.$emit('close');
+                },
+                onError: function (errors) {
+                    vm.transitioning = false;
+                    vm.transitionError = Object.values(errors).join(' ');
+                },
+            });
+        },
+
+        endTraining: function () {
+            let vm = this;
+            this.transitionError = '';
+            if (!this.exitEmploymentStatus) {
+                this.transitionError = 'Please select your exit employment status.';
+                return;
+            }
+            this.transitioning = true;
+            this.$inertia.put('/student/applications/transition', {
+                id: this.application.id,
+                claim_status: 'Training Ended',
+                employment_status_exit: this.exitEmploymentStatus,
+            }, {
+                preserveScroll: true,
+                onSuccess: function () {
+                    vm.transitioning = false;
+                    vm.$emit('close');
+                },
+                onError: function (errors) {
+                    vm.transitioning = false;
+                    vm.transitionError = Object.values(errors).join(' ');
+                },
+            });
+        },
 
         fetchPrograms: function (e) {
             let guid = e;

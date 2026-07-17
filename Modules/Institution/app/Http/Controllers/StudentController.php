@@ -34,7 +34,8 @@ class StudentController extends Controller
 
         $claims = Claim::where('user_guid', $student)
             ->where('institution_guid', $institution->guid)
-            ->with('program', 'allocation', 'institution')
+            ->whereNotIn('claim_status', ['Draft'])
+            ->with('program', 'offering', 'institution')
             ->orderByDesc('created_at')
             ->get();
 
@@ -63,11 +64,11 @@ class StudentController extends Controller
             'first_name' => $latest?->first_name,
             'middle_name' => $latest?->middle_name,
             'last_name' => $latest?->last_name,
-            'email' => $latest?->email,
-            'sin' => $latest?->sin,
-            'dob' => $latest?->dob,
+            'email' => $latest?->email_address,
+            'sin' => $latest?->social_insurance_number,
+            'dob' => $latest?->date_of_birth,
             'city' => $latest?->city,
-            'zip_code' => $latest?->zip_code,
+            'zip_code' => $latest?->postal_code,
             'claims' => $claims->values(),
         ];
     }

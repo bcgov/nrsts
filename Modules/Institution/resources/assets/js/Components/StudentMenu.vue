@@ -10,7 +10,7 @@
 import { Link } from '@inertiajs/vue3';
 defineProps({
     page: String,
-    id: Number,
+    id: String,
     first_name: String,
     last_name: String
 });

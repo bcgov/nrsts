@@ -30,17 +30,7 @@ class ProgramEditRequest extends FormRequest
             'guid' => 'required',
             'institution_guid' => 'required|exists:institutions,guid',
             'program_name' => 'required',
-            'delivery_method' => 'required',
-            'online_delivery_type' => 'required',
-            'credential_type' => 'required',
-            'micro_credential_type' => 'nullable',
-            'high_priority_industry' => 'required',
 
-            'creditable' => 'required|boolean',
-            'full_time' => 'required|boolean',
-            'prov_funded_micro_cred' => 'required|boolean',
-            'indigenous_related_learning' => 'required|boolean',
-            'diversity_inclusion_related_learning' => 'required|boolean',
             'active_status' => 'required|boolean',
             'funding_type' => 'required|exists:utils,field_name',
 
@@ -57,11 +47,6 @@ class ProgramEditRequest extends FormRequest
     {
         $this->merge([
             'active_status' => $this->toBoolean($this->active_status),
-            'creditable' => $this->toBoolean($this->creditable),
-            'full_time' => $this->toBoolean($this->full_time),
-            'prov_funded_micro_cred' => $this->toBoolean($this->prov_funded_micro_cred),
-            'indigenous_related_learning' => $this->toBoolean($this->indigenous_related_learning),
-            'diversity_inclusion_related_learning' => $this->toBoolean($this->diversity_inclusion_related_learning),
 
             'last_touch_by_user_guid' => $this->user()->guid,
         ]);

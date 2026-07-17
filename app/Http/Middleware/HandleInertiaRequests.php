@@ -5,6 +5,7 @@ namespace App\Http\Middleware;
 use App\Models\ProgramYear;
 use App\Models\User;
 use App\Models\Util;
+use App\Services\PdexService;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -61,7 +62,7 @@ class HandleInertiaRequests extends Middleware
 
                 // Find the program year with status 'active'
                 $activeProgramYear = $programYears->firstWhere('status', 'active');
-                $programs = $user->institution->programs
+                $programs = $user->institution->activePrograms
                     ->sortBy('program_name') // Sort by program_name in ascending order
                     ->pluck('program_name', 'guid')
                     ->toArray();
@@ -79,6 +80,11 @@ class HandleInertiaRequests extends Middleware
             return Util::getSortedUtils();
         });
 
+        // PDEX student profile option lists (province, gender, etc.). Shared globally so the
+        // claim/applicant profile fields render their selected labels wherever they appear
+        // (student application forms and the institution claim editor). Cached in the service.
+        $studentUtils = is_null($user) ? [] : app(PdexService::class)->studentUtils();
+
         return array_merge(parent::share($request), [
             'auth' => [
                 'user' => $user,
@@ -86,6 +92,7 @@ class HandleInertiaRequests extends Middleware
                 'readOnly' => Session::has('read-only'),
             ],
             'utils' => $sortedUtils,
+            'studentUtils' => $studentUtils,
             'programYearsData' => [
                 'list' => $globalProgramYears['list'],
                 'default' => $globalProgramYears['default'],

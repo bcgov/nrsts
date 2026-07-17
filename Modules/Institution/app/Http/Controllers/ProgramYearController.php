@@ -25,7 +25,7 @@ class ProgramYearController extends Controller
         Cache::remember('global_program_years_' . $user->institution->guid, now()->addHours(10), function () use ($programYear, $user) {
             $programYears = ProgramYear::orderBy('id')->get();
 
-            $programs = $user->institution->programs
+            $programs = $user->institution->activePrograms
                 ->sortBy('program_name') // Sort by program_name in ascending order
                 ->pluck('program_name', 'guid')
                 ->toArray();

@@ -1,9 +1,9 @@
 <template>
     <div v-if="claims != null && claims.data.length > 0" class="card">
     <div class="card-header">
-            Institution Claims by Course
+            Institution Applications by Course
             <template>
-                <span class="badge rounded-pill text-bg-primary me-1">Active Claim Total: {{ claims.data.length }}</span>
+                <span class="badge rounded-pill text-bg-primary me-1">Active Application Total: {{ claims.data.length }}</span>
             </template>
             <button type="button" class="btn btn-success btn-sm float-end" @click="openNewForm">New Claim</button>
         </div>
@@ -21,16 +21,17 @@
                             <td>{{ row.first_name }}</td>
                             <td><Link :href="'/ministry/students/' + row.user_guid">{{ row.last_name }}</Link></td>
                             <td>{{ row.program.program_name }}</td>
-                            <td>${{ $amountPlusPyFee(row.estimated_hold_amount, row.py_admin_fee) }}</td>
-                            <td>${{ totalPlusAdmin(row) }}
-                                <span v-if="row.correction_amount > 0 || row.correction_amount < 0" style="color: red;">*</span>
-                            </td>
+                            <td>${{ row.total_claim_amount }}</td>
 <!--                            <td>${{ row.student.total_grant }}</td>-->
                             <td>
                                 <span v-if="row.claim_status === 'Draft'" class="badge rounded-pill text-bg-info">Draft</span>
                                 <span v-else-if="row.claim_status === 'Submitted'" class="badge rounded-pill text-bg-primary">Submitted</span>
-                                <span v-else-if="row.claim_status === 'Hold'" class="badge rounded-pill text-bg-warning">Hold</span>
-                                <span v-else-if="row.claim_status === 'Claimed'" class="badge rounded-pill text-bg-success">Claimed</span>
+                                <span v-else-if="row.claim_status === 'EI Confirmed'" class="badge rounded-pill text-bg-success">EI Confirmed</span>
+                                <span v-else-if="row.claim_status === 'EI Not Confirmed'" class="badge rounded-pill text-bg-danger">EI Not Confirmed</span>
+                                <span v-else-if="row.claim_status === 'Training Started'" class="badge rounded-pill text-bg-warning">Training Started</span>
+                                <span v-else-if="row.claim_status === 'Training Ended'" class="badge rounded-pill text-bg-warning">Training Ended</span>
+                                <span v-else-if="row.claim_status === 'Completed'" class="badge rounded-pill text-bg-success">Completed</span>
+                                <span v-else-if="row.claim_status === 'Expired'" class="badge rounded-pill text-bg-danger">Expired</span>
                                 <span v-else class="badge rounded-pill text-bg-secondary">{{ row.claim_status }}</span>
                                 <span v-if="row.process_feedback != null" class="badge rounded-pill text-bg-danger ms-1">!</span>
 
@@ -149,18 +150,6 @@ export default {
         },
         updateClaims: function (e) {
             this.claims = e;
-        },
-        totalPlusAdmin(claim) {
-            const programFee = parseFloat(claim.program_fee) || 0;
-            const registrationFee = parseFloat(claim.registration_fee) || 0;
-            const materialsFee = parseFloat(claim.materials_fee) || 0;
-            const adminFeePercentage = parseFloat(claim.allocation.py_admin_fee) || 0;
-            const correction = parseFloat(claim.correction_amount) || 0;
-
-            const total = programFee + registrationFee + materialsFee + correction;
-            const adminFee = total * (adminFeePercentage / 100);
-
-            return total + adminFee;
         }
     },
     computed: {

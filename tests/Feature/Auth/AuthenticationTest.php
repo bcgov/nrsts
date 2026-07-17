@@ -2,7 +2,6 @@
 
 namespace Tests\Feature\Auth;
 
-use App\Models\Allocation;
 use App\Models\Institution;
 use App\Models\InstitutionStaff;
 use App\Models\ProgramYear;

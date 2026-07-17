@@ -37,7 +37,7 @@
         </th>
 
         <th scope="col">
-                <span># Claims</span>
+                <span># Applications</span>
         </th>
     </tr>
 </template>

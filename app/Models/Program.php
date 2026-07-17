@@ -4,6 +4,7 @@ namespace App\Models;
 
 use Illuminate\Database\Eloquent\Factories\HasFactory;
 use Illuminate\Database\Eloquent\Model;
+use Illuminate\Database\Eloquent\Relations\HasMany;
 use Illuminate\Database\Eloquent\SoftDeletes;
 
 class Program extends Model
@@ -15,10 +16,9 @@ class Program extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = ['guid', 'program_name', 'program_type', 'program_number', 'delivery_method', 'online_delivery_type',
-        'credential_type', 'micro_credential_type', 'high_priority_industry', 'total_duration_hrs', 'creditable', 'full_time', 'prov_funded_micro_cred',
-        'indigenous_related_learning', 'diversity_inclusion_related_learning', 'active_status', 'excel_guid',
-        'start_date', 'end_date', 'last_touch_by_user_guid', 'funding_type'];
+    protected $fillable = ['guid', 'program_name', 'category', 'number_weeks', 'number_levels', 'active_status', 'last_touch_by_user_guid', 'funding_type',
+        'intervention_name', 'intervention_code', 'credential_earned', 'noc_code', 'naics_code',
+        'literacy_essential_skills_increase'];
 
     /**
      * The attributes that should be hidden for serialization.
@@ -36,5 +36,13 @@ class Program extends Model
     public function scopeIsActive($query)
     {
         return $query->where('active_status', true);
+    }
+
+    /**
+     * The offerings that belong to this program.
+     */
+    public function offerings(): HasMany
+    {
+        return $this->hasMany(ProgramOffering::class, 'program_guid', 'guid');
     }
 }

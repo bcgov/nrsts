@@ -3,10 +3,10 @@
 namespace Tests\Feature\Student;
 
 use App\Events\ApplicationSubmitted;
-use App\Models\Allocation;
 use App\Models\Claim;
 use App\Models\Institution;
 use App\Models\Program;
+use App\Models\ProgramOffering;
 use App\Models\ProgramYear;
 use App\Models\Role;
 use App\Models\User;
@@ -42,14 +42,13 @@ class ApplicationControllerTest extends TestCase
     private function profilePayload(): array
     {
         return [
-            'sin'         => '932069073',
+            'social_insurance_number' => '932069073',
             'first_name'  => 'Alice',
             'last_name'   => 'Johnson',
-            'dob'         => '1990-05-15',
-            'email'       => 'alice.johnson@example.com',
+            'date_of_birth' => '1990-05-15',
+            'email_address' => 'alice.johnson@example.com',
             'city'        => 'Vancouver',
-            'zip_code'    => 'V0V0V0',
-            'expiry_date' => '2027-01-01',
+            'postal_code' => 'V0V0V0',
         ];
     }
 
@@ -58,24 +57,21 @@ class ApplicationControllerTest extends TestCase
         Event::fake();
 
         $institution = Institution::factory()->create();
-        $programYear = ProgramYear::factory()->create();
-        $allocation = Allocation::factory()->create([
-            'institution_guid'  => $institution->guid,
-            'program_year_guid' => $programYear->guid,
-            'status'            => 'active',
-        ]);
+        $programYear = ProgramYear::factory()->create(['status' => 'active']);
         $program = Program::factory()->create([
             'institution_guid' => $institution->guid,
+        ]);
+        $offering = ProgramOffering::factory()->create([
+            'institution_guid'  => $institution->guid,
+            'program_guid'      => $program->guid,
+            'program_year_guid' => $programYear->guid,
+            'active_status'     => true,
         ]);
 
         $storeData = array_merge($this->profilePayload(), [
             'institution_guid'       => $institution->guid,
             'program_guid'           => $program->guid,
             'claim_status'           => 'Submitted',
-            'agreement_confirmed'    => true,
-            'registration_confirmed' => true,
-            'estimated_hold_amount'  => 100,
-            'claim_percent'          => 50,
         ]);
 
         $this->actingAs($this->user);
@@ -104,24 +100,23 @@ class ApplicationControllerTest extends TestCase
         Event::fake();
 
         $institution = Institution::factory()->create();
-        $programYear = ProgramYear::factory()->create();
-        $allocation = Allocation::factory()->create([
-            'institution_guid'  => $institution->guid,
-            'program_year_guid' => $programYear->guid,
-            'status'            => 'active',
-        ]);
+        $programYear = ProgramYear::factory()->create(['status' => 'active']);
         $program = Program::factory()->create([
             'institution_guid' => $institution->guid,
+        ]);
+        $offering = ProgramOffering::factory()->create([
+            'institution_guid'  => $institution->guid,
+            'program_guid'      => $program->guid,
+            'program_year_guid' => $programYear->guid,
+            'active_status'     => true,
         ]);
 
         // Create a Claim record with initial valid data.
         $claim = Claim::factory()->create([
             'institution_guid'       => $institution->guid,
-            'allocation_guid'        => $allocation->guid,
+            'program_offering_guid'  => $offering->guid,
             'program_guid'           => $program->guid,
             'user_guid'              => $this->user->guid,
-            'agreement_confirmed'    => true,
-            'registration_confirmed' => true,
             'claim_status'           => 'Submitted',
         ]);
 
@@ -131,10 +126,6 @@ class ApplicationControllerTest extends TestCase
             'institution_guid'       => $institution->guid,
             'program_guid'           => $program->guid,
             'claim_status'           => 'Submitted',
-            'agreement_confirmed'    => true,
-            'registration_confirmed' => true,
-            'estimated_hold_amount'  => 100,
-            'claim_percent'          => 50,
         ]);
 
         $this->actingAs($this->user);
@@ -146,11 +137,9 @@ class ApplicationControllerTest extends TestCase
         $this->assertDatabaseHas('claims', [
             'id'                     => $claim->id,
             'guid'                   => $claim->guid,
-            'agreement_confirmed'    => true,
-            'registration_confirmed' => true,
             'claim_status'           => 'Submitted',
             'institution_guid'       => $institution->guid,
-            'allocation_guid'        => $allocation->guid,
+            'program_offering_guid'  => $offering->guid,
             'program_guid'           => $program->guid,
             'user_guid'              => $this->user->guid,
         ]);

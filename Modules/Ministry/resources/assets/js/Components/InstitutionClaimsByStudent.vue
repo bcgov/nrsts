@@ -1,9 +1,9 @@
 <template>
     <div v-if="claims != null && claims.data.length > 0" class="card">
     <div class="card-header">
-            Institution Claims by Student
+            Institution Applications by Student
             <template>
-                <span class="badge rounded-pill text-bg-primary me-1">Active Claim Total: {{ claims.data.length }}</span>
+                <span class="badge rounded-pill text-bg-primary me-1">Active Application Total: {{ claims.data.length }}</span>
             </template>
             <button type="button" class="btn btn-success btn-sm float-end" @click="openNewForm">New Claim</button>
         </div>

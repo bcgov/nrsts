@@ -12,14 +12,13 @@
                                 Institution Menu
                             </div>
                             <div class="card-body">
-                                <InstitutionMenu :page="page" :id="results.id" :name="results.name" />
+                                <InstitutionMenu :page="page" :id="results.id" :name="results.name" :applications-count="results.claims_count" :offerings-count="results.offerings_count" :staff-count="results.staff_count" />
                             </div>
                         </div>
                     </div>
                     <div class="col-md-9 mb-3">
                         <InstitutionDetails v-bind="$attrs" v-if="page === 'details'" :results="results"></InstitutionDetails>
-                        <InstitutionPrograms v-bind="$attrs" v-if="page === 'programs'" :results="results"></InstitutionPrograms>
-                        <InstitutionAllocations v-bind="$attrs" v-if="page === 'allocations'" :results="results" :program-years="programYears"></InstitutionAllocations>
+                        <InstitutionOfferings v-bind="$attrs" v-if="page === 'offerings'" :results="results" :program-years="programYears"></InstitutionOfferings>
                         <InstitutionStaff v-bind="$attrs" v-if="page === 'staff'" :results="results"></InstitutionStaff>
                         <InstitutionClaimsByCourse v-bind="$attrs" v-if="page === 'claims-by-course'" :results="results"></InstitutionClaimsByCourse>
                         <InstitutionClaimsByStudent v-bind="$attrs" v-if="page === 'claims-by-student'" :results="results"></InstitutionClaimsByStudent>
@@ -37,16 +36,15 @@ import InstitutionDetails from "../Components/InstitutionDetails";
 import InstitutionClaimsByCourse from "../Components/InstitutionClaimsByCourse";
 import InstitutionClaimsByStudent from "../Components/InstitutionClaimsByStudent";
 import InstitutionStaff from "../Components/InstitutionStaff";
-import InstitutionAllocations from "../Components/InstitutionAllocations";
-import InstitutionPrograms from "../Components/InstitutionPrograms";
+import InstitutionOfferings from "../Components/InstitutionOfferings";
 
 export default {
     name: 'Institution',
     components: {
-        InstitutionAllocations,
+        InstitutionOfferings,
         InstitutionMenu,
         AuthenticatedLayout, Head, Link, InstitutionDetails, InstitutionClaimsByCourse, InstitutionClaimsByStudent,
-        InstitutionStaff, InstitutionPrograms
+        InstitutionStaff
     },
     props: {
         results: Object,

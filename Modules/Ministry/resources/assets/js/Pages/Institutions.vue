@@ -42,16 +42,7 @@
                                                 <span v-else class="badge rounded-pill text-bg-danger">Inactive</span>
                                             </td>
                                             <td>{{ row.size }}</td>
-                                            <template v-if="row.active_allocation != null">
-                                                <td>${{row.active_allocation.total_amount_formatted }}</td>
-<!--                                                <td>{{row.active_allocation.on_hold_amount}}</td>-->
-<!--                                                <td>{{row.active_allocation.total_amount - row.active_allocation.claimed_amount}}</td>-->
-                                            </template>
-                                            <template v-else>
-                                                <td>$0</td>
-<!--                                                <td></td>-->
-<!--                                                <td></td>-->
-                                            </template>
+                                            <td>${{ row.active_offerings_total_formatted }}</td>
                                             <td>
                                                 <span v-if="row.overallocation_flag" class="badge rounded-pill text-bg-danger">True</span>
                                                 <span v-else class="badge rounded-pill text-bg-success">False</span>

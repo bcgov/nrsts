@@ -2,9 +2,9 @@
     <div>
         <div v-if="claims != null && claims.data.length > 0" class="card mb-3">
         <div class="card-header">
-                Student Claims
+                Student Applications
                 <template>
-                    <span class="badge rounded-pill text-bg-primary me-1">Active Claim Total: {{ claims.data.length }}</span>
+                    <span class="badge rounded-pill text-bg-primary me-1">Active Application Total: {{ claims.data.length }}</span>
                 </template>
     <!--            <button type="button" class="btn btn-success btn-sm float-end" @click="openNewForm">New Claim</button>-->
             </div>
@@ -18,11 +18,8 @@
                         <tbody>
                         <template v-for="(row, i) in claims.data">
                             <tr v-if="row !== null">
-                                <td><a href="#" @click="openEditForm(row)">{{ row.program.program_name }}</a></td>
-                                <td>${{ row.estimated_hold_amount }}</td>
-                                <td>${{ row.registration_fee }}</td>
-                                <td>${{ row.materials_fee }}</td>
-                                <td>${{ row.program_fee }}</td>
+                                <td><a href="#" @click="openEditForm(row)">{{ row.program?.program_name ?? '—' }}</a></td>
+                                <td>${{ row.total_claim_amount }}</td>
                                 <td>
                                     <span v-if="row.claim_status === 'Draft'" class="badge rounded-pill text-bg-info">Draft</span>
                                     <span v-else-if="row.claim_status === 'Submitted'" class="badge rounded-pill text-bg-primary">Submitted</span>
@@ -39,10 +36,7 @@
                         <tfoot>
                         <tr>
                             <th></th>
-                            <th>${{ countTotals('hold') }}</th>
-                            <th>${{ countTotals('registration_fee') }}</th>
-                            <th>${{ countTotals('materials_fee') }}</th>
-                            <th>${{ countTotals('program_fee') }}</th>
+                            <th>${{ countTotals('total') }}</th>
                             <th></th>
                             <th></th>
                         </tr>
@@ -104,29 +98,9 @@ export default {
         countTotals: function (type) {
             if(this.claims.data == null || this.claims.data.length === 0) return 0;
             let total = 0;
-            if(type === 'hold'){
+            if(type === 'total'){
                 this.claims.data.forEach(item => {
-                    total += parseFloat(item.estimated_hold_amount);
-                });
-            }
-            if(type === 'program_fee'){
-                this.claims.data.forEach(item => {
-                    total += parseFloat(item.program_fee);
-                });
-            }
-            if(type === 'registration_fee'){
-                this.claims.data.forEach(item => {
-                    total += parseFloat(item.registration_fee);
-                });
-            }
-            if(type === 'materials_fee'){
-                this.claims.data.forEach(item => {
-                    total += parseFloat(item.materials_fee);
-                });
-            }
-            if(type === 'correction_amount'){
-                this.claims.data.forEach(item => {
-                    total += parseFloat(item.correction_amount);
+                    total += parseFloat(item.total_claim_amount);
                 });
             }
 
@@ -146,7 +120,7 @@ export default {
         closeEditForm: function () {
             $("#editClaimModal").modal('hide');
             this.editClaim = '';
-            this.$inertia.visit('/institution/students/' + this.results.id + '/claims');
+            this.$inertia.visit('/institution/students/' + this.results.guid + '/claims');
 
         },
         formatDate: function (value) {

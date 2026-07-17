@@ -12,32 +12,25 @@ class Claim extends Model
     use HasFactory, SoftDeletes;
 
     // Append the computed attribute
-    protected $appends = ['py_admin_fee', 'claimed_by_name'];
+    protected $appends = ['claimed_by_name', 'total_claim_amount'];
 
     /**
      * The attributes that are mass assignable.
      *
      * @var array<int, string>
      */
-    protected $fillable = ['sin', 'first_name', 'last_name', 'dob', 'email', 'city', 'zip_code',
-        'claim_type', 'course_name', 'claim_status', 'claimed_by_user_guid', 'claimed_date',
-        'registration_fee', 'materials_fee', 'program_fee', 'claim_percent',
-        'estimated_hold_amount', 'total_claim_amount',
-        'stable_enrolment_date', 'expiry_date', 'psi_claim_request_date', 'reporting_completed_date',
-        'fifty_two_week_affirmation', 'agreement_confirmed', 'registration_confirmed',
-        'guid', 'institution_guid', 'allocation_guid', 'program_guid', 'expected_stable_enrolment_date',
-        'expected_completion_date', 'outcome_effective_date', 'outcome_status', 'correction_amount', 'correction_comment',
-        'funding_type',
+    protected $fillable = ['social_insurance_number', 'first_name', 'last_name', 'date_of_birth', 'email_address', 'city', 'postal_code',
+        'claim_status', 'claimed_by_user_guid',
+        'guid', 'institution_guid', 'program_offering_guid', 'program_guid', 'apprentice_number',
+        'outcome_status', 'ei_reference_code',
         // Applicant profile captured on the claim (replaces the student profile)
-        'user_guid', 'middle_name', 'address_line1', 'address_line2', 'province', 'country', 'telephone',
-        'gender_identity', 'marital_status', 'number_of_dependants', 'disability_status',
-        'indigenous_identity', 'immigration_status', 'immigration_year', 'visible_minority_status',
-        'highest_education_level', 'official_language_choice', 'official_language_service',
+        'user_guid', 'middle_name', 'address_line1', 'address_line2', 'province', 'region', 'country', 'phone_number',
+        'gender', 'marital_status', 'number_of_dependants', 'disability_status',
+        'indigenous_status', 'indigenous_group', 'immigration_status', 'immigration_year',
+        'visible_minority_status', 'racial_identity', 'is_visible_minority',
+        'highest_level_of_education', 'official_language_choice', 'official_language_service',
         'employment_status_intake', 'employment_status_exit', 'precarious_employment',
-        'intervention_name', 'intervention_code', 'intervention_start_date', 'intervention_end_date',
-        'intervention_outcome', 'credential_earned', 'noc_code', 'naics_code',
-        'action_plan_start_date', 'action_plan_end_date', 'action_plan_outcome', 'action_plan_outcome_date',
-        'literacy_essential_skills_increase',
+        'intervention_outcome',
     ];
 
     /**
@@ -46,34 +39,16 @@ class Claim extends Model
      * @var array<string, string>
      */
     protected $casts = [
-        'intervention_start_date' => 'date',
-        'intervention_end_date' => 'date',
-        'action_plan_start_date' => 'date',
-        'action_plan_end_date' => 'date',
-        'action_plan_outcome_date' => 'date',
         'number_of_dependants' => 'integer',
         'immigration_year' => 'integer',
+        'is_visible_minority' => 'boolean',
+        'disability_status' => 'boolean',
+        'indigenous_status' => 'boolean',
     ];
 
     protected static function boot()
     {
         parent::boot();
-
-        static::saving(function ($claim) {
-            // Snapshot the funding type from the program so each claim keeps its own copy.
-            // Once a claim is Claimed the value is frozen, making historical claims immutable
-            // even if the program's funding type is later changed.
-            if (empty($claim->program_guid)) {
-                return;
-            }
-            $isClaimed = $claim->claim_status === 'Claimed';
-            if (!$isClaimed || empty($claim->funding_type)) {
-                $program = Program::where('guid', $claim->program_guid)->first();
-                $claim->funding_type = ($program && $program->funding_type)
-                    ? $program->funding_type
-                    : 'Gov. Priorities';
-            }
-        });
 
         static::updated(function ($claim) {
             $changes = $claim->getChanges();
@@ -118,15 +93,49 @@ class Claim extends Model
         return $this->belongsTo(User::class, 'user_guid', 'guid');
     }
 
-    public function allocation()
+    public function offering()
     {
-        return $this->belongsTo(Allocation::class, 'allocation_guid', 'guid');
+        return $this->belongsTo(ProgramOffering::class, 'program_offering_guid', 'guid');
+    }
+
+    /**
+     * Snapshot of the institution captured for this claim.
+     */
+    public function claimInstitution()
+    {
+        return $this->hasOne(ClaimInstitution::class, 'claim_guid', 'guid');
+    }
+
+    /**
+     * Snapshot of the program captured for this claim.
+     */
+    public function claimProgram()
+    {
+        return $this->hasOne(ClaimProgram::class, 'claim_guid', 'guid');
+    }
+
+    /**
+     * Snapshot of the program offering captured for this claim.
+     */
+    public function claimProgramOffering()
+    {
+        return $this->hasOne(ClaimProgramOffering::class, 'claim_guid', 'guid');
     }
 
     // Define the accessor for the computed attribute
-    public function getPyAdminFeeAttribute()
+
+    /**
+     * The claim amount is derived from the offering: each claim consumes one
+     * seat, so its value is the offering total divided by the seat count.
+     */
+    public function getTotalClaimAmountAttribute()
     {
-        return $this->allocation->py->claim_percent;
+        $offering = $this->offering;
+        if (! $offering || empty($offering->total_seats)) {
+            return 0;
+        }
+
+        return round($offering->total_amount / $offering->total_seats, 2);
     }
 
     public function getClaimedByNameAttribute()

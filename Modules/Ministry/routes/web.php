@@ -2,12 +2,12 @@
 
 use Illuminate\Auth\Middleware\Authenticate;
 use Illuminate\Support\Facades\Route;
-use Modules\Ministry\Http\Controllers\AllocationController;
 use Modules\Ministry\Http\Controllers\ClaimController;
 use Modules\Ministry\Http\Controllers\InstitutionController;
 use Modules\Ministry\Http\Controllers\InstitutionStaffController;
 use Modules\Ministry\Http\Controllers\MaintenanceController;
 use Modules\Ministry\Http\Controllers\ProgramController;
+use Modules\Ministry\Http\Controllers\ProgramOfferingController;
 use Modules\Ministry\Http\Controllers\StudentController;
 use Modules\Ministry\Http\Middleware\IsActive;
 
@@ -36,9 +36,10 @@ Route::prefix('ministry')->group(function () {
 
             Route::put('/programs', [ProgramController::class, 'update'])->name('programs.update');
             Route::post('/programs', [ProgramController::class, 'store'])->name('programs.store');
-
-            Route::put('/allocations', [AllocationController::class, 'update'])->name('allocations.update');
-            Route::post('/allocations', [AllocationController::class, 'store'])->name('allocations.store');
+            Route::get('/programs', [ProgramController::class, 'index'])->name('programs.index');
+            Route::post('/program-offerings', [ProgramOfferingController::class, 'store'])->name('program_offerings.store');
+            Route::put('/program-offerings', [ProgramOfferingController::class, 'update'])->name('program_offerings.update');
+            Route::get('/programs/{program}/{page?}', [ProgramController::class, 'show'])->name('programs.show');
 
             Route::get('/claims', [ClaimController::class, 'index'])->name('claims.index');
             Route::put('/claims', [ClaimController::class, 'update'])->name('claims.update');

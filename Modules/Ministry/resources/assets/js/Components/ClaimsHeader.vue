@@ -1,9 +1,9 @@
 <template>
     <tr>
         <th scope="col" class="text-nowrap">
-            <a href="#" @click="switchSort('sin')">
+            <a href="#" @click="switchSort('social_insurance_number')">
                 <span>SIN</span>
-                <em v-if="sortClmn === 'sin' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
+                <em v-if="sortClmn === 'social_insurance_number' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
                 <em v-else class="bi bi-sort-numeric-down"></em>
             </a>
         </th>
@@ -39,20 +39,6 @@
             <a href="#" @click="switchSort('py')">
                 <span title="Program Year">Program Year</span>
                 <em v-if="sortClmn === 'py' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
-                <em v-else class="bi bi bi-sort-numeric-down"></em>
-            </a>
-        </th>
-        <th scope="col" class="text-nowrap">
-            <a href="#" @click="switchSort('estimated_hold_amount')">
-                <span title="Estimated Hold">* Est. Hold</span>
-                <em v-if="sortClmn === 'estimated_hold_amount' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
-                <em v-else class="bi bi bi-sort-numeric-down"></em>
-            </a>
-        </th>
-        <th scope="col" class="text-nowrap">
-            <a href="#" @click="switchSort('total_claim_amount')">
-                <span>* Claim Total</span>
-                <em v-if="sortClmn === 'total_claim_amount' && sortType === 'desc'" class="bi bi-sort-numeric-up"></em>
                 <em v-else class="bi bi bi-sort-numeric-down"></em>
             </a>
         </th>

@@ -11,7 +11,7 @@ class Institution extends Model
     use HasFactory, SoftDeletes;
 
     // Append the computed attribute
-    protected $appends = ['overallocation_flag'];
+    protected $appends = ['overallocation_flag', 'active_offerings_total_formatted'];
 
     /**
      * The attributes that are mass assignable.
@@ -38,15 +38,36 @@ class Institution extends Model
         return $this->hasMany(Claim::class, 'institution_guid', 'guid')->where('claim_status', '!=', 'draft')->orderBy('created_at');
     }
 
-    public function allocations()
+    /**
+     * The program offerings delivered by this institution.
+     */
+    public function offerings()
     {
-        return $this->hasMany(Allocation::class, 'institution_guid', 'guid')->orderByDesc('created_at');
+        return $this->hasMany(ProgramOffering::class, 'institution_guid', 'guid')->orderBy('offering_name');
     }
 
-    public function activeAllocation()
+    /**
+     * The active program offerings delivered by this institution.
+     */
+    public function activeOfferings()
     {
-        return $this->hasOne(Allocation::class, 'institution_guid', 'guid')
-            ->where('status', 'active');
+        return $this->hasMany(ProgramOffering::class, 'institution_guid', 'guid')
+            ->where('active_status', true);
+    }
+
+    /**
+     * The active programs offered by this institution (via program_offerings).
+     */
+    public function activePrograms()
+    {
+        return $this->belongsToMany(
+            Program::class,
+            'program_offerings',
+            'institution_guid',
+            'program_guid',
+            'guid',
+            'guid'
+        )->where('programs.active_status', true)->distinct();
     }
 
     public function staff()
@@ -74,36 +95,31 @@ class Institution extends Model
     // Define the accessor for the computed attribute
     public function getOverallocationFlagAttribute()
     {
-        $activeAllocation = $this->activeAllocation;
-        if (! $activeAllocation) {
-            return false; // No active allocation found, no overallocation
+        // Each Claimed claim consumes one seat of its offering. The institution
+        // is over-allocated once the number of Claimed claims across its active
+        // offerings exceeds the total seats offered by those offerings.
+        // Use the query builder (not the dynamic property) so the relation is
+        // never cached/serialized, which would recurse via ProgramOffering::$with.
+        $activeOfferingGuids = $this->activeOfferings()->pluck('guid');
+        if ($activeOfferingGuids->isEmpty()) {
+            return false; // No active offerings, no overallocation.
         }
 
-        $programYear = $activeAllocation->py;
-        $claimPercent = $programYear ? $programYear->claim_percent : 1; // Default to 1 if not found
+        $totalSeats = (int) $this->activeOfferings()->sum('total_seats');
 
-        // Calculate the claimed amount
-        $claimedAmount = $this->claims()
-            ->where('allocation_guid', $this->activeAllocation->guid)
+        $claimedCount = $this->claims()
+            ->whereIn('program_offering_guid', $activeOfferingGuids)
             ->where('claim_status', 'Claimed')
-            ->sum(\DB::raw('registration_fee + materials_fee + program_fee + correction_amount'));
+            ->count();
 
-        $this->setClaimedAmountAttribute($claimedAmount);
-
-        //$claimedAmount needs to be a formatted number to avoid = "1.159671e+06" since it is going to too large
-        //        $claimed = number_format($claimedAmount, 2);
-
-        // Calculate the overallocation flag
-        $overAllocationFlag = (float) $this->activeAllocation->total_amount >
-            (((float) $this->activeAllocation->total_amount -
-                    $claimedAmount)
-                * 1.1 * $claimPercent);
-
-        return $overAllocationFlag;
+        return $totalSeats > 0 && $claimedCount > $totalSeats;
     }
 
-    public function setClaimedAmountAttribute($value)
+    /**
+     * Total dollar amount committed across this institution's active offerings.
+     */
+    public function getActiveOfferingsTotalFormattedAttribute()
     {
-        $this->attributes['claimed_amount'] = $value;
+        return number_format((float) $this->activeOfferings()->sum('total_amount'), 0, '.', '');
     }
 }

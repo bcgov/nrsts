@@ -15,11 +15,11 @@ class ProgramYear extends Model
      *
      * @var array<int, string>
      */
-    protected $fillable = ['guid', 'start_date', 'end_date', 'claim_percent', 'status', 'comment', 'last_touch_by_user_guid'];
+    protected $fillable = ['guid', 'start_date', 'end_date', 'total_budget', 'status', 'comment', 'last_touch_by_user_guid'];
 
-    public function allocations()
+    public function offerings()
     {
-        return $this->hasMany(Allocation::class, 'program_year_guid', 'guid')->orderBy('created_at');
+        return $this->hasMany(ProgramOffering::class, 'program_year_guid', 'guid')->orderBy('created_at');
     }
 
     /**

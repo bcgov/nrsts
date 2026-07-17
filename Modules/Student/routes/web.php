@@ -25,6 +25,7 @@ Route::group(
         Route::get('/applications', [ApplicationController::class, 'applications'])->name('home');
         Route::post('/applications', [ApplicationController::class, 'store'])->name('applications.store');
         Route::put('/applications', [ApplicationController::class, 'update'])->name('applications.update');
+        Route::put('/applications/transition', [ApplicationController::class, 'transition'])->name('applications.transition');
 
         Route::get('/student/api/fetch/students/applications', [ApplicationController::class, 'fetchApplications'])->name('claims.fetchApplications');
         Route::get('/student/api/fetch/institutions/{institution?}', [StudentController::class, 'fetchInstitutions'])->name('claims.fetchInstitutions');

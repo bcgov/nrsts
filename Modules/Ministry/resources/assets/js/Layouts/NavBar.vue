@@ -34,9 +34,15 @@ nav.navbar .form-select {
                         </NavLink>
                     </li>
                     <li class="nav-item">
+                        <NavLink class="nav-link" href="/ministry/programs"
+                                 :class="{ 'active': $page.url.indexOf('/program') > -1 }">
+                            Programs
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
                         <NavLink class="nav-link" href="/ministry/claims"
                                  :class="{ 'active': $page.url.indexOf('/claims') > -1 }">
-                            Claims
+                            Applications
                         </NavLink>
                     </li>
                     <li v-if="isAdmin" class="nav-item">

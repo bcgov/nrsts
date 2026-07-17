@@ -38,7 +38,7 @@ class ClaimStoreRequest extends FormRequest
     public function rules()
     {
         return [
-            'guid' => 'required|unique:allocations,guid',
+            'guid' => 'required|unique:claims,guid',
             'institution_guid' => 'required|exists:institutions,guid',
             'program_year_guid' => 'required|exists:program_years,guid',
             'total_amount' => 'required|numeric',

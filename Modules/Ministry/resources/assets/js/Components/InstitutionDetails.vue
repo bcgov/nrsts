@@ -6,9 +6,18 @@
                     Institution Record
                     <small class="text-muted">(PDEX)</small>
                 </span>
-                <span :class="pdexInstitution.active_status ? 'badge bg-success' : 'badge bg-secondary'">
-                    {{ pdexInstitution.active_status ? 'Active' : 'Inactive' }}
-                </span>
+                <div class="form-check form-switch mb-0">
+                    <input id="institution_active_switch"
+                           class="form-check-input"
+                           type="checkbox"
+                           role="switch"
+                           :checked="results.active_status"
+                           :disabled="statusForm.processing"
+                           @change="toggleStatus">
+                    <label class="form-check-label" for="institution_active_switch">
+                        {{ results.active_status ? 'Active' : 'Inactive' }}
+                    </label>
+                </div>
             </div>
             <div class="card-body">
                 <h5 class="card-title mb-3">{{ pdexInstitution.legal_operating_name || '—' }}</h5>
@@ -75,12 +84,24 @@
     </div>
 </template>
 <script>
+import { useForm } from '@inertiajs/vue3';
+
 export default {
     name: 'InstitutionDetails',
     props: {
         results: Object,
         pdexInstitution: Object,
         pdexSites: [Object, Array],
+    },
+    data() {
+        return {
+            statusForm: useForm({
+                id: this.results.id,
+                guid: this.results.guid,
+                name: this.results.name,
+                active_status: this.results.active_status,
+            }),
+        };
     },
     computed: {
         pdexSitesList() {
@@ -94,6 +115,27 @@ export default {
         },
     },
     methods: {
+        toggleStatus(event) {
+            const goingInactive = this.results.active_status;
+            const message = goingInactive
+                ? 'Set this institution to INACTIVE? This will also deactivate all of its offerings.'
+                : 'Set this institution to ACTIVE?';
+
+            if (! confirm(message)) {
+                if (event && event.target) {
+                    event.target.checked = this.results.active_status;
+                }
+                return;
+            }
+
+            this.statusForm.active_status = ! this.results.active_status;
+            this.statusForm.put('/ministry/institutions', {
+                preserveScroll: true,
+                onSuccess: () => {
+                    this.$inertia.visit('/ministry/institutions/' + this.results.id);
+                },
+            });
+        },
         siteTitle(site) {
             return site.operating_name || site.name || site.site_name || ('Site ' + (site.id ?? ''));
         },

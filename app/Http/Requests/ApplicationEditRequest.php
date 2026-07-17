@@ -2,12 +2,13 @@
 
 namespace App\Http\Requests;
 
-use App\Models\Allocation;
 use App\Models\Claim;
-use App\Rules\InstitutionAllocationReached;
+use App\Models\ProgramOffering;
+use App\Rules\OfferingSeatsReached;
 use App\Rules\ValidSin;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Facades\Log;
+use Illuminate\Validation\Rule;
 
 class ApplicationEditRequest extends FormRequest
 {
@@ -20,14 +21,17 @@ class ApplicationEditRequest extends FormRequest
     {
         $claim = Claim::find($this->id);
 
-        // Prevent updates if the current claim_status is not "Claimed" and the claim allocation is not active
-        // This is to prevent updates to claims that are not in an active allocation
-        // and are not in "Claimed" status
-        if ($claim->claim_status !== 'Claimed' && $claim->allocation->status !== 'active') {
-            Log::warning('ApplicationEditRequest authorization failed: Allocation not active', [
+        // Prevent updates if the current claim_status is not "Claimed" and the claim's
+        // offering is not active. This is to prevent updates to claims that are not in an
+        // active offering and are not in "Claimed" status. Drafts are exempt because they
+        // do not have an offering assigned until the applicant selects one.
+        if ($claim->claim_status !== 'Claimed'
+            && $claim->claim_status !== 'Draft'
+            && ! ($claim->offering && $claim->offering->active_status)) {
+            Log::warning('ApplicationEditRequest authorization failed: Offering not active', [
                 'claim_id' => $claim->id,
                 'claim_status' => $claim->claim_status,
-                'allocation_status' => $claim->allocation->status,
+                'offering_active_status' => $claim->offering?->active_status,
                 'user_id' => $this->user()?->id,
             ]);
             return false;
@@ -57,6 +61,9 @@ class ApplicationEditRequest extends FormRequest
         return [
             'institution_guid.*' => 'The Institution field is required.',
             'program_guid.*' => 'The Program field is required.',
+            'apprentice_number.required' => 'The Apprentice Number is required to submit an application.',
+            'region.required' => 'The Region is required to submit an application.',
+            'region.exists' => 'The selected Region is invalid.',
         ];
     }
 
@@ -67,81 +74,57 @@ class ApplicationEditRequest extends FormRequest
      */
     public function rules()
     {
-        $allocation = Allocation::where('guid', $this->input('allocation_guid'))->with('institution')->first();
+        $offering = ProgramOffering::where('guid', $this->input('program_offering_guid'))->with('institution')->first();
 
         $rules = [
             'id' => 'required',
             'guid' => 'required',
             'claim_status' => 'required|string',
             'institution_guid' => 'required|exists:institutions,guid',
-            'allocation_guid' => 'required|exists:allocations,guid',
+            'program_offering_guid' => 'required|exists:program_offerings,guid',
             'program_guid' => 'required|exists:programs,guid',
+            'apprentice_number' => ($this->claim_status === 'Submitted' ? 'required' : 'nullable').'|string',
             'user_guid' => 'required|exists:users,guid',
-            'sin' => ['required', new ValidSin],
+            'social_insurance_number' => ['required', new ValidSin],
             'first_name' => 'required|string',
             'middle_name' => 'nullable|string',
             'last_name' => 'required|string',
-            'dob' => 'required|date_format:Y-m-d',
-            'email' => 'required|email',
-            'telephone' => 'nullable|string',
+            'date_of_birth' => 'required|date_format:Y-m-d',
+            'email_address' => 'required|email',
+            'phone_number' => 'nullable|string',
             'address_line1' => 'nullable|string',
             'address_line2' => 'nullable|string',
             'city' => 'required|string',
             'province' => 'nullable|string',
+            'region' => $this->claim_status === 'Submitted'
+                ? ['required', 'string', Rule::exists('utils', 'field_name')->where('field_type', 'Regions')->where('active_flag', true)]
+                : ['nullable', 'string'],
             'country' => 'nullable|string',
-            'zip_code' => 'required|string|regex:/^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/',
-            'gender_identity' => 'nullable|string',
+            'postal_code' => 'required|string|regex:/^[A-Za-z]\d[A-Za-z]\d[A-Za-z]\d$/',
+            'gender' => 'nullable|string',
             'marital_status' => 'nullable|string',
             'number_of_dependants' => 'nullable|integer',
-            'disability_status' => 'nullable|string',
-            'indigenous_identity' => 'nullable|string',
+            'disability_status' => 'nullable|boolean',
+            'indigenous_status' => 'nullable|boolean',
+            'indigenous_group' => 'nullable|string',
             'immigration_status' => 'nullable|string',
             'immigration_year' => 'nullable|integer',
             'visible_minority_status' => 'nullable|string',
-            'highest_education_level' => 'nullable|string',
+            'racial_identity' => 'nullable|string',
+            'is_visible_minority' => 'nullable|boolean',
+            'highest_level_of_education' => 'nullable|string',
             'official_language_choice' => 'nullable|string',
             'official_language_service' => 'nullable|string',
             'employment_status_intake' => 'nullable|string',
             'employment_status_exit' => 'nullable|string',
             'precarious_employment' => 'nullable|string',
-            'intervention_name' => 'nullable|string',
-            'intervention_code' => 'nullable|string',
-            'intervention_start_date' => 'nullable|date_format:Y-m-d',
-            'intervention_end_date' => 'nullable|date_format:Y-m-d',
             'intervention_outcome' => 'nullable|string',
-            'credential_earned' => 'nullable|string',
-            'noc_code' => 'nullable|string',
-            'naics_code' => 'nullable|string',
-            'action_plan_start_date' => 'nullable|date_format:Y-m-d',
-            'action_plan_end_date' => 'nullable|date_format:Y-m-d',
-            'action_plan_outcome' => 'nullable|string',
-            'action_plan_outcome_date' => 'nullable|date_format:Y-m-d',
-            'literacy_essential_skills_increase' => 'nullable|string',
-            'expiry_date' => 'required|date_format:Y-m-d',
-            'correction_amount' => 'nullable|numeric',
-            'correction_comment' => 'required_if:correction_amount,!null',
+
         ];
 
-        if ($this->claim_status === 'Draft') {
+        if ($this->claim_status === 'Submitted') {
             $rules = array_merge($rules, [
-                'agreement_confirmed' => 'boolean',
-                'registration_confirmed' => 'boolean',
-            ]);
-
-        } elseif ($this->claim_status === 'Submitted') {
-            $rules = array_merge($rules, [
-                'allocation_limit_reached' => new InstitutionAllocationReached($allocation),
-
-                'agreement_confirmed' => 'required|boolean|accepted:true',
-                'registration_confirmed' => 'required|boolean|accepted:true',
-
-                'registration_fee' => 'nullable|numeric',
-                'materials_fee' => 'nullable|numeric',
-                'program_fee' => 'nullable|numeric',
-                'estimated_hold_amount' => 'required|numeric',
-                'total_claim_amount' => 'nullable|numeric',
-                'claim_percent' => 'required|numeric',
-
+                'allocation_limit_reached' => new OfferingSeatsReached($offering),
             ]);
         }
 
@@ -161,13 +144,14 @@ class ApplicationEditRequest extends FormRequest
         }
 
         $claim = Claim::find($this->id);
-        $allocation = Allocation::where('institution_guid', $this->institution_guid)
-            ->where('status', 'active')
+        $offering = ProgramOffering::where('institution_guid', $this->institution_guid)
+            ->where('program_guid', $this->program_guid)
+            ->where('active_status', true)
             ->orderByDesc('created_at')
             ->first();
 
-        if (! $allocation) {
-            throw new \Exception('Allocation not found.');
+        if (! $offering) {
+            throw new \Exception('Active program offering not found.');
         }
 
         // Preserve the owning user on the claim; profile fields come from the form.
@@ -176,18 +160,7 @@ class ApplicationEditRequest extends FormRequest
             'last_touch_by_user_guid' => $this->user()->guid,
 
             'user_guid' => $claim?->user_guid ?? $this->user()->guid,
-            'allocation_guid' => $allocation->guid,
-
-            'agreement_confirmed' => $this->toBoolean($this->agreement_confirmed),
-            'registration_confirmed' => $this->toBoolean($this->registration_confirmed),
-
-            'registration_fee' => 0,
-            'materials_fee' => 0,
-            'program_fee' => 0,
-            'estimated_hold_amount' => 0,
-            'total_claim_amount' => 0,
-            'claim_percent' => 0,
-            'expiry_date' => $allocation->py->end_date,
+            'program_offering_guid' => $offering->guid,
         ]);
     }
 

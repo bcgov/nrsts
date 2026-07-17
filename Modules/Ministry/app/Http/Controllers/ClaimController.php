@@ -8,9 +8,9 @@ use App\Http\Controllers\Controller;
 use App\Http\Requests\ClaimEditRequest;
 use App\Http\Requests\MinistryClaimEditRequest;
 use App\Http\Requests\ClaimStoreRequest;
-use App\Models\Allocation;
 use App\Models\Claim;
 use App\Models\Program;
+use App\Models\ProgramOffering;
 use App\Models\ProgramYear;
 use App\Models\User;
 use Illuminate\Http\Request;
@@ -40,9 +40,20 @@ class ClaimController extends Controller
     public function fetchClaims(Request $request, $guid = null)
     {
         if (! is_null($guid)) {
-            $claim = Claim::where('guid', $guid)->with('institution', 'program', 'user', 'allocation')->first();
+            $programs = [];
+            $claim = Claim::where('guid', $guid)->with('institution', 'program', 'user', 'offering')->first();
             if (! is_null($claim)) {
-                $programs = Program::where('institution_guid', $claim->institution_guid)->get();
+                // Programs are global; the ones relevant to this claim are those with an
+                // active offering at the claim's institution (plus the claim's current program).
+                $programGuids = ProgramOffering::where('institution_guid', $claim->institution_guid)
+                    ->where('active_status', true)
+                    ->pluck('program_guid')
+                    ->push($claim->program_guid)
+                    ->filter()
+                    ->unique()
+                    ->all();
+
+                $programs = Program::whereIn('guid', $programGuids)->orderBy('program_name')->get();
             }
 
             return Response::json(['status' => true, 'programs' => $programs, 'claim' => $claim]);
@@ -94,7 +105,6 @@ class ClaimController extends Controller
     {
         $claim = Claim::find($request->id);
         $claim->outcome_status = null;
-        $claim->outcome_effective_date = null;
         $claim->save();
 
         return Redirect::route('ministry.institutions.show', [$claim->institution->id, 'claims-by-course']);
@@ -125,7 +135,7 @@ class ClaimController extends Controller
 
     private function paginateClaimsByInstitution($institutionGuid)
     {
-        $claims = Claim::where('institution_guid', $institutionGuid)->with('user', 'program', 'allocation');
+        $claims = Claim::where('institution_guid', $institutionGuid)->with('user', 'program', 'offering');
 
         if (request()->sort !== null) {
             $claims = $claims->orderBy(request()->sort, request()->direction);
@@ -138,7 +148,7 @@ class ClaimController extends Controller
 
     private function paginateStudentClaims($studentGuid)
     {
-        $claims = Claim::where('user_guid', $studentGuid)->with('user', 'program', 'allocation', 'institution');
+        $claims = Claim::where('user_guid', $studentGuid)->with('user', 'program', 'offering', 'institution');
 
         if (request()->sort !== null) {
             $claims = $claims->orderBy(request()->sort, request()->direction);
@@ -164,11 +174,11 @@ class ClaimController extends Controller
                 'first_name' => $latest?->first_name,
                 'middle_name' => $latest?->middle_name,
                 'last_name' => $latest?->last_name,
-                'email' => $latest?->email,
-                'sin' => $latest?->sin,
-                'dob' => $latest?->dob,
+                'email' => $latest?->email_address,
+                'sin' => $latest?->social_insurance_number,
+                'dob' => $latest?->date_of_birth,
                 'city' => $latest?->city,
-                'zip_code' => $latest?->zip_code,
+                'zip_code' => $latest?->postal_code,
                 'claims' => $group->values(),
             ];
         })->values();
@@ -197,7 +207,7 @@ class ClaimController extends Controller
     private function paginateClaims()
     {
         $claims = Claim::whereNotIn('claim_status', ['Draft'])
-            ->with('user', 'program');
+            ->with('user', 'program', 'offering.py');
 
         if (request()->filter_term !== null && request()->filter_type !== null) {
             if(request()->filter_type === 'status'){
@@ -216,11 +226,11 @@ class ClaimController extends Controller
 //                'program' => $claims->where('program_guid', request()->filter_term),
                 'fname' => $claims->where('first_name', 'ILIKE', '%'.request()->filter_term.'%'),
                 'lname' => $claims->where('last_name', 'ILIKE', '%'.request()->filter_term.'%'),
-                'sin' => $claims->where('sin', 'ILIKE', '%'.request()->filter_term.'%'),
-                'email' => $claims->where('email', 'ILIKE', '%'.request()->filter_term.'%'),
+                'sin' => $claims->where('social_insurance_number', 'ILIKE', '%'.request()->filter_term.'%'),
+                'email' => $claims->where('email_address', 'ILIKE', '%'.request()->filter_term.'%'),
                 'status' => $claims->where('claim_status', 'ILIKE', $claim_status),
-                'py_start_date' => $claims->join('allocations', 'claims.allocation_guid', '=', 'allocations.guid')
-                    ->join('program_years', 'allocations.program_year_guid', '=', 'program_years.guid')
+                'py_start_date' => $claims->join('program_offerings', 'claims.program_offering_guid', '=', 'program_offerings.guid')
+                    ->join('program_years', 'program_offerings.program_year_guid', '=', 'program_years.guid')
                     ->where('program_years.start_date', request()->filter_term)
                     ->select('claims.*'),
                 'program' => $claims->join('programs', 'claims.program_guid', '=', 'programs.guid')
@@ -237,9 +247,9 @@ class ClaimController extends Controller
         if (request()->sort !== null && request()->sort !== 'py' && request()->sort !== 'institution' && request()->sort !== 'program') {
             $claims = $claims->orderBy(request()->sort, request()->direction);
         } elseif (request()->sort === 'py') {
-            // Join the allocations table to sort on its start_date column.
-            $claims = $claims->join('allocations', 'claims.allocation_guid', '=', 'allocations.guid')
-                ->join('program_years', 'allocations.program_year_guid', '=', 'program_years.guid')
+            // Join the program offerings table to sort on its program year start_date column.
+            $claims = $claims->join('program_offerings', 'claims.program_offering_guid', '=', 'program_offerings.guid')
+                ->join('program_years', 'program_offerings.program_year_guid', '=', 'program_years.guid')
                 ->orderBy('program_years.start_date', request()->direction)
                 ->select('claims.*');
         }  elseif (request()->sort === 'institution') {
@@ -254,14 +264,6 @@ class ClaimController extends Controller
             $claims = $claims->orderBy('created_at', 'desc');
         }
 
-        return $claims->with('institution.allocations', 'institution.programs')->paginate(25)->onEachSide(1)->appends(request()->query());
-    }
-
-    private function getAllocations()
-    {
-        $programYear = ProgramYear::active()->first();
-
-        return Allocation::where('program_year_guid', $programYear->guid)
-            ->with('py')->orderByDesc('created_at')->get();
+        return $claims->with('institution.activePrograms')->paginate(25)->onEachSide(1)->appends(request()->query());
     }
 }

@@ -10,6 +10,7 @@ use App\Models\InstitutionStaff;
 use App\Models\ProgramYear;
 use App\Models\Role;
 use App\Models\User;
+use App\Models\Util;
 use Illuminate\Http\Request;
 use Illuminate\Support\Facades\Auth;
 use Illuminate\Support\Facades\Cache;
@@ -29,7 +30,7 @@ class InstitutionController extends Controller
             $programYears = ProgramYear::orderBy('id')->get();
             $programYear = ProgramYear::where('status', 'active')->first();
 
-            $programs = $user->institution->programs
+            $programs = $user->institution->activePrograms
                 ->sortBy('program_name') // Sort by program_name in ascending order
                 ->pluck('program_name', 'guid')
                 ->toArray();
@@ -43,36 +44,84 @@ class InstitutionController extends Controller
 
         $programYear = ProgramYear::where('guid', $cacheProgramYear['default'])->first();
 
-        // Load all active allocations for the program year (a program year may contain several).
-        $institution->load(['allocations' => function ($query) use ($programYear) {
-            $query->where('program_year_guid', $programYear->guid)->where('status', 'active');
-            $query->orderByDesc('created_at');
+        // Load all active offerings for the program year (each carries its own budget/seats).
+        $institution->load(['offerings' => function ($query) use ($programYear) {
+            $query->where('program_year_guid', $programYear->guid)->where('active_status', true);
+            $query->with('program');
+            $query->orderBy('offering_name');
         }]);
 
-        $claimPercent = (float) $programYear->claim_percent;
+        $offeringGuids = $institution->offerings->pluck('guid');
 
-        // Adds the admin fee to a net claim amount so figures match the allocation accounting.
-        $withAdmin = function ($amount) use ($claimPercent) {
-            $amount = (float) $amount;
-            return ($claimPercent > 0 && $amount) ? $amount + ($amount / $claimPercent) : $amount;
-        };
+        // Application/claim counts by lifecycle status across the institution's active offerings.
+        $statusCounts = Claim::where('institution_guid', $institution->guid)
+            ->whereIn('program_offering_guid', $offeringGuids)
+            ->selectRaw('claim_status, count(*) as total')
+            ->groupBy('claim_status')
+            ->pluck('total', 'claim_status');
 
-        // Build a per-allocation, per-funding-type summary for the dashboard cards.
-        $allocationSummaries = $institution->allocations->values();
+        $stats = [
+            'submitted' => (int) ($statusCounts['Submitted'] ?? 0),
+            'hold' => (int) ($statusCounts['Hold'] ?? 0),
+            'trainingStarted' => (int) ($statusCounts['Training Started'] ?? 0),
+            'trainingEnded' => (int) ($statusCounts['Training Ended'] ?? 0),
+            'completed' => (int) ($statusCounts['Completed'] ?? 0),
+        ];
 
-        // Claims awaiting outcome reporting across all active allocations for the program year.
-        $waitingOutcome = Claim::where('institution_guid', $institution->guid)
-            ->whereIn('allocation_guid', $institution->allocations->pluck('guid'))
-            ->where('claim_status', 'Claimed')
-            ->whereNull('outcome_effective_date')
-            ->whereNull('outcome_status')
-            ->count();
+        // Statuses that consume a seat in an offering.
+        $seatConsumingStatuses = ['Submitted', 'EI Confirmed', 'Training Started', 'Training Ended', 'Completed'];
+
+        // Support payment amount per week per seat (Utils variable, e.g. 400).
+        $supportPaymentPerWeek = (float) (Util::where('field_type', 'Support Payment Per Week')
+            ->where('active_flag', true)
+            ->value('field_name') ?? 0);
+
+        $totalSeats = 0;
+        $seatsUsed = 0;
+        $totalFunding = 0.0;
+
+        // Build a per-offering summary for the dashboard: seats, usage and funding.
+        $offeringSummaries = $institution->offerings->map(function ($offering) use (
+            $seatConsumingStatuses, $supportPaymentPerWeek, &$totalSeats, &$seatsUsed, &$totalFunding
+        ) {
+            $seats = (int) $offering->total_seats;
+
+            $used = Claim::where('program_offering_guid', $offering->guid)
+                ->whereIn('claim_status', $seatConsumingStatuses)
+                ->count();
+
+            $weeks = (int) ($offering->program->number_weeks ?? 0);
+            $funding = $supportPaymentPerWeek * $seats * $weeks;
+
+            $totalSeats += $seats;
+            $seatsUsed += $used;
+            $totalFunding += $funding;
+
+            return [
+                'guid' => $offering->guid,
+                'offering_name' => $offering->offering_name,
+                'total_seats' => $seats,
+                'seats_used' => $used,
+                'seats_available' => max($seats - $used, 0),
+                'number_weeks' => $weeks,
+                'funding' => $funding,
+            ];
+        })->values();
+
+        $seatSummary = [
+            'total' => $totalSeats,
+            'used' => $seatsUsed,
+            'available' => max($totalSeats - $seatsUsed, 0),
+        ];
 
         return Inertia::render('Institution::Dashboard', [
             'results' => $institution,
             'programYear' => $programYear,
-            'allocationSummaries' => $allocationSummaries,
-            'waitingOutcome' => $waitingOutcome,
+            'offeringSummaries' => $offeringSummaries,
+            'stats' => $stats,
+            'seatSummary' => $seatSummary,
+            'totalFunding' => $totalFunding,
+            'supportPaymentPerWeek' => $supportPaymentPerWeek,
         ]);
     }
 
