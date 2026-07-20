@@ -147,7 +147,17 @@ objects:
                     - bash
                     - -c
                     - |
-                      set -Eeuo pipefail && df "${PATRONI_POSTGRESQL_DATA_DIR:-/home/postgres/pgdata}" --output=pcent | tail -n 1 | awk '{if ($1+0 > 90) exit 1; else exit 0;}' && pg_isready -q && curl -s localhost:8008/readiness | jq -e ". | select(.state == \"running\")"
+                      set -Eeuo pipefail 
+                      # Check disk space - use parent directory if data dir doesn't exist yet
+                      DATA_DIR="${PATRONI_POSTGRESQL_DATA_DIR:-/home/postgres/pgdata}"
+                      if [ -d "$DATA_DIR" ]; then
+                        CHECK_DIR="$DATA_DIR"
+                      else
+                        CHECK_DIR="/home/postgres/pgdata"
+                      fi
+                      df "$CHECK_DIR" --output=pcent | tail -n 1 | awk '{if ($1+0 > 90) exit 1; else exit 0;}' 
+                      # Check PostgreSQL and Patroni readiness
+                      pg_isready -q && curl -s localhost:8008/readiness | jq -e ". | select(.state == \"running\")"
               volumeMounts:
                 - mountPath: /home/postgres/pgdata
                   name: ${PATRONI_NAME}
@@ -210,7 +220,7 @@ parameters:
     description:
       The size of the persistent volume to create.
     displayName: Persistent Volume Size
-    value: 500Mi
+    value: 200Mi
   - name: STORAGE_CLASS
     value: netapp-file-standard
   - name: IMAGE_REGISTRY

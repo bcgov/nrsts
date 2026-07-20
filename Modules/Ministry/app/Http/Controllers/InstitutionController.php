@@ -86,9 +86,19 @@ class InstitutionController extends Controller
      */
     public function fetchFromPdex(): RedirectResponse
     {
+        \Log::info('PDEX "Fetch Institutions from PDEX" attempt', [
+            'user_id' => optional(auth()->user())->id,
+            'user_guid' => optional(auth()->user())->guid,
+            'user_email' => optional(auth()->user())->email,
+            'ip' => request()->ip(),
+            'api_url' => (string) config('services.pdex.api_url'),
+        ]);
+
         $baseUrl = rtrim((string) config('services.pdex.api_url'), '/');
 
         if ($baseUrl === '') {
+            \Log::warning('PDEX institutions fetch aborted: PDEX API URL is not configured.');
+
             return Redirect::route('ministry.institutions.index')
                 ->with('error', 'PDEX API URL is not configured.');
         }
@@ -96,6 +106,8 @@ class InstitutionController extends Controller
         $token = $this->pdex->token();
 
         if (empty($token)) {
+            \Log::warning('PDEX institutions fetch aborted: could not obtain an access token.');
+
             return Redirect::route('ministry.institutions.index')
                 ->with('error', 'Could not obtain an access token from the PDEX token endpoint.');
         }
@@ -112,8 +124,17 @@ class InstitutionController extends Controller
                 ->with('error', 'Unable to reach the PDEX API.');
         }
 
+        \Log::info('PDEX institutions fetch response received', [
+            'request_url' => $baseUrl.'/institutions',
+            'status' => $response->status(),
+            'content_type' => $response->header('Content-Type'),
+        ]);
+
         if ($response->failed()) {
-            \Log::error('PDEX institutions fetch returned HTTP '.$response->status().': '.$response->body());
+            \Log::error('PDEX institutions fetch returned HTTP '.$response->status().': '.$response->body(), [
+                'request_url' => $baseUrl.'/institutions',
+                'response_headers' => $response->headers(),
+            ]);
 
             return Redirect::route('ministry.institutions.index')
                 ->with('error', 'Failed to fetch institutions from PDEX (HTTP '.$response->status().').');

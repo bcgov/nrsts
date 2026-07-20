@@ -22,8 +22,19 @@ class PdexService
         $clientId = config('services.pdex.client_id');
         $clientSecret = config('services.pdex.client_secret');
 
+        Log::info('PDEX token request starting', [
+            'token_endpoint' => $tokenEndpoint !== '' ? $tokenEndpoint : '(empty)',
+            'api_url' => (string) config('services.pdex.api_url'),
+            'client_id' => $this->maskSecret($clientId),
+            'client_secret_set' => ! empty($clientSecret),
+        ]);
+
         if ($tokenEndpoint === '' || empty($clientId) || empty($clientSecret)) {
-            Log::error('PDEX token request skipped: client credentials or token endpoint not configured.');
+            Log::error('PDEX token request skipped: client credentials or token endpoint not configured.', [
+                'token_endpoint_set' => $tokenEndpoint !== '',
+                'client_id_set' => ! empty($clientId),
+                'client_secret_set' => ! empty($clientSecret),
+            ]);
 
             return null;
         }
@@ -52,11 +63,64 @@ class PdexService
         $accessToken = $response->json('access_token');
         $expiresIn = (int) ($response->json('expires_in') ?? 0);
 
+        Log::info('PDEX token request succeeded', [
+            'access_token_received' => ! empty($accessToken),
+            'expires_in' => $expiresIn,
+            'token_claims' => $accessToken ? $this->decodeJwtClaims($accessToken) : null,
+        ]);
+
         if ($accessToken && $expiresIn > 60) {
             Cache::put('pdex_access_token', $accessToken, $expiresIn - 60);
         }
 
         return $accessToken;
+    }
+
+    /**
+     * Mask a secret/id for safe logging, keeping only the last 4 characters.
+     */
+    private function maskSecret($value): string
+    {
+        $value = (string) $value;
+
+        if ($value === '') {
+            return '(empty)';
+        }
+
+        return str_repeat('*', max(strlen($value) - 4, 0)).substr($value, -4);
+    }
+
+    /**
+     * Decode (without verifying) the payload claims of a JWT for diagnostics.
+     * Returns only non-sensitive claims useful for confirming which realm
+     * issued the token (issuer, audience, authorized party, expiry).
+     */
+    private function decodeJwtClaims(string $jwt): array
+    {
+        $parts = explode('.', $jwt);
+
+        if (count($parts) < 2) {
+            return ['error' => 'not-a-jwt'];
+        }
+
+        $payload = base64_decode(strtr($parts[1], '-_', '+/'), true);
+
+        if ($payload === false) {
+            return ['error' => 'undecodable-payload'];
+        }
+
+        $claims = json_decode($payload, true);
+
+        if (! is_array($claims)) {
+            return ['error' => 'invalid-json-payload'];
+        }
+
+        return [
+            'iss' => $claims['iss'] ?? null,
+            'aud' => $claims['aud'] ?? null,
+            'azp' => $claims['azp'] ?? null,
+            'exp' => $claims['exp'] ?? null,
+        ];
     }
 
     /**
