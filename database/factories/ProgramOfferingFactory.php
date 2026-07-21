@@ -36,7 +36,7 @@ class ProgramOfferingFactory extends Factory
             'location_name'      => $this->faker->optional()->city,
             'total_amount'       => $this->faker->numberBetween(10000, 500000),
             'total_seats'        => $this->faker->numberBetween(1, 50),
-            'active_status'      => true,
+            'offering_status'    => 'approved',
         ];
     }
 }

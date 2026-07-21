@@ -27,7 +27,7 @@ class ProcessSubmittedClaim
             $allowedToUpdateClaimFromInactivePy = true;
         }
 
-        if (!$allowedToUpdateClaimFromInactivePy && ! ($claim->offering && $claim->offering->active_status) && $status != 'Cancelled') {
+        if (!$allowedToUpdateClaimFromInactivePy && ! ($claim->offering && $claim->offering->offering_status === 'approved') && $status != 'Cancelled') {
             $claim->claim_status = 'Draft';
         }
 

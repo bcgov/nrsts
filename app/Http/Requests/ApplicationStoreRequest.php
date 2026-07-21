@@ -132,7 +132,7 @@ class ApplicationStoreRequest extends FormRequest
         if ($this->institution_guid && $this->program_guid) {
             $offering = ProgramOffering::where('institution_guid', $this->institution_guid)
                 ->where('program_guid', $this->program_guid)
-                ->where('active_status', true)
+                ->where('offering_status', 'approved')
                 ->orderByDesc('created_at')
                 ->first();
         }

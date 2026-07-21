@@ -27,11 +27,11 @@ class ApplicationEditRequest extends FormRequest
         // do not have an offering assigned until the applicant selects one.
         if ($claim->claim_status !== 'Claimed'
             && $claim->claim_status !== 'Draft'
-            && ! ($claim->offering && $claim->offering->active_status)) {
+            && ! ($claim->offering && $claim->offering->offering_status === 'approved')) {
             Log::warning('ApplicationEditRequest authorization failed: Offering not active', [
                 'claim_id' => $claim->id,
                 'claim_status' => $claim->claim_status,
-                'offering_active_status' => $claim->offering?->active_status,
+                'offering_active_status' => $claim->offering?->offering_status === 'approved',
                 'user_id' => $this->user()?->id,
             ]);
             return false;
@@ -146,7 +146,7 @@ class ApplicationEditRequest extends FormRequest
         $claim = Claim::find($this->id);
         $offering = ProgramOffering::where('institution_guid', $this->institution_guid)
             ->where('program_guid', $this->program_guid)
-            ->where('active_status', true)
+            ->where('offering_status', 'approved')
             ->orderByDesc('created_at')
             ->first();
 

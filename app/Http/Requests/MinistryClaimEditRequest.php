@@ -67,11 +67,11 @@ class MinistryClaimEditRequest extends FormRequest
         }
 
         // The claim's offering must be active to be actioned.
-        if (! ($claim->offering && $claim->offering->active_status)) {
+        if (! ($claim->offering && $claim->offering->offering_status === 'approved')) {
             Log::warning('MinistryClaimEditRequest authorization failed: Offering not active', [
                 'claim_id' => $claim->id,
                 'claim_status' => $current,
-                'offering_active_status' => $claim->offering?->active_status,
+                'offering_active_status' => $claim->offering?->offering_status === 'approved',
                 'user_id' => $this->user()?->id,
             ]);
             return false;

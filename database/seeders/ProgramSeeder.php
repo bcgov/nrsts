@@ -166,7 +166,7 @@ class ProgramSeeder extends Seeder
         // identifier across re-runs.
         $values = array_merge([
             'institution_guid' => $institution->guid,
-            'active_status'    => true,
+            'offering_status'  => 'approved',
             'updated_at'       => $now,
         ], $attributes);
 

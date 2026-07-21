@@ -30,15 +30,10 @@ class InstitutionController extends Controller
             $programYears = ProgramYear::orderBy('id')->get();
             $programYear = ProgramYear::where('status', 'active')->first();
 
-            $programs = $user->institution->activePrograms
-                ->sortBy('program_name') // Sort by program_name in ascending order
-                ->pluck('program_name', 'guid')
-                ->toArray();
 
             return [
                 'list' => $programYears,
                 'default' => $programYear->guid,
-                'programs' => $programs,
             ];
         });
 
@@ -46,7 +41,7 @@ class InstitutionController extends Controller
 
         // Load all active offerings for the program year (each carries its own budget/seats).
         $institution->load(['offerings' => function ($query) use ($programYear) {
-            $query->where('program_year_guid', $programYear->guid)->where('active_status', true);
+                $query->where('program_year_guid', $programYear->guid)->where('offering_status', 'approved');
             $query->with('program');
             $query->orderBy('offering_name');
         }]);

@@ -29,7 +29,7 @@ class StudentController extends Controller
                 // in the active program year.
                 $programs = Program::isActive()
                     ->whereHas('offerings', function ($query) use ($activeProgramYearGuid, $institution) {
-                        $query->where('active_status', true)
+                        $query->where('offering_status', 'approved')
                             ->where('program_year_guid', $activeProgramYearGuid)
                             ->where('institution_guid', $institution->guid);
                     })

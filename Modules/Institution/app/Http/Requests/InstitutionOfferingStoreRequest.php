@@ -1,20 +1,20 @@
 <?php
 
-namespace App\Http\Requests;
+namespace Modules\Institution\Http\Requests;
 
-use App\Models\Program;
+use App\Models\ProgramYear;
 use App\Rules\OfferingWithinProgramYearBudget;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
 
-class ProgramOfferingStoreRequest extends FormRequest
+class InstitutionOfferingStoreRequest extends FormRequest
 {
     /**
      * Determine if the user is authorized to make this request.
      */
     public function authorize(): bool
     {
-        return $this->user()->can('create', Program::class);
+        return $this->user()->institution !== null;
     }
 
     /**
@@ -36,7 +36,7 @@ class ProgramOfferingStoreRequest extends FormRequest
             'location_name' => 'nullable',
             'total_amount' => ['required', 'numeric', 'min:0', new OfferingWithinProgramYearBudget($this->program_year_guid)],
             'total_seats' => 'required|integer|min:0',
-            'offering_status' => 'required|in:draft,submitted,approved,inactive,declined',
+            'offering_status' => 'required|in:draft,submitted',
             'created_by_guid' => 'required|exists:users,guid',
             'updated_by_guid' => 'required|exists:users,guid',
         ];
@@ -46,9 +46,8 @@ class ProgramOfferingStoreRequest extends FormRequest
     {
         return [
             'program_guid.required' => 'Program is required',
-            'institution_guid.required' => 'Institution is required',
             'offering_name.required' => 'Offering name is required',
-            'total_amount.required' => 'Total amount is required',
+            'total_amount.required' => 'Total budget is required',
             'total_seats.required' => 'Total seats is required',
             'end_date.after_or_equal' => 'End date must be on or after the start date',
         ];
@@ -57,24 +56,24 @@ class ProgramOfferingStoreRequest extends FormRequest
     /**
      * Prepare the data for validation.
      *
+     * The institution and program year are always derived from the logged-in
+     * institution and the active program year, never trusted from the client.
+     * Status is limited to draft or submitted.
+     *
      * @return void
      */
     protected function prepareForValidation()
     {
+        $institution = $this->user()->institution;
+        $activeProgramYear = ProgramYear::where('status', 'active')->first();
+
         $this->merge([
             'guid' => Str::orderedUuid()->getHex(),
+            'institution_guid' => $institution?->guid,
+            'program_year_guid' => $activeProgramYear?->guid,
+            'offering_status' => $this->offering_status === 'submitted' ? 'submitted' : 'draft',
             'created_by_guid' => $this->user()->guid,
             'updated_by_guid' => $this->user()->guid,
         ]);
-    }
-
-    /**
-     * Convert to boolean.
-     *
-     * @return bool
-     */
-    private function toBoolean($booleable)
-    {
-        return filter_var($booleable, FILTER_VALIDATE_BOOLEAN, FILTER_NULL_ON_FAILURE);
     }
 }

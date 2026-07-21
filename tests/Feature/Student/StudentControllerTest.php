@@ -45,7 +45,7 @@ class StudentControllerTest extends TestCase
         $institution = Institution::factory()->create();
         ProgramOffering::factory()->create([
             'institution_guid' => $institution->guid,
-            'active_status'    => true,
+            'offering_status'  => 'approved',
         ]);
 
         // Fetch a specific institution.

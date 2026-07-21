@@ -247,7 +247,7 @@ class ApplicationController extends Controller
                 // Only offer programs that have an active offering at this institution,
                 // so applicants cannot select a program without a valid offering.
                 $programGuids = ProgramOffering::where('institution_guid', $institution->guid)
-                    ->where('active_status', true)
+                    ->where('offering_status', 'approved')
                     ->pluck('program_guid')
                     ->unique()
                     ->all();

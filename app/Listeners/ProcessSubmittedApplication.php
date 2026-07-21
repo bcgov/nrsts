@@ -21,7 +21,7 @@ class ProcessSubmittedApplication
         $claim->process_feedback = null;
 
         // If the claim submitted against an inactive offering stop there.
-        if (! ($claim->offering && $claim->offering->active_status)) {
+        if (! ($claim->offering && $claim->offering->offering_status === 'approved')) {
             $claim->claim_status = 'Draft';
             $claim->process_feedback = 'Claim submitted against an inactive offering';
         }

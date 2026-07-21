@@ -22,7 +22,7 @@ class ProgramOffering extends Model
     protected $fillable = ['guid', 'institution_guid', 'program_guid', 'program_year_guid', 'offering_name', 'offering_description',
         'start_date', 'end_date', 'location_name', 'total_amount', 'total_seats',
         'intervention_start_date', 'intervention_end_date', 'action_plan_start_date', 'action_plan_end_date',
-        'action_plan_outcome', 'action_plan_outcome_date', 'active_status', 'created_by_guid', 'updated_by_guid'];
+        'action_plan_outcome', 'action_plan_outcome_date', 'offering_status', 'created_by_guid', 'updated_by_guid'];
 
     /**
      * The relationships to always append to the model.
@@ -64,14 +64,14 @@ class ProgramOffering extends Model
     }
 
     /**
-     * Scope a query to only include active offerings.
+     * Scope a query to only include active (approved) offerings.
      *
      * @param  \Illuminate\Database\Eloquent\Builder  $query
      * @return \Illuminate\Database\Eloquent\Builder
      */
     public function scopeIsActive($query)
     {
-        return $query->where('active_status', true);
+        return $query->where('offering_status', 'approved');
     }
 
     /**

@@ -52,7 +52,7 @@ class ClaimController extends Controller
                 // active offering at the claim's institution (plus the claim's current program,
                 // so it always renders even if its offering is no longer active).
                 $programGuids = ProgramOffering::where('institution_guid', $claim->institution_guid)
-                    ->where('active_status', true)
+                    ->where('offering_status', 'approved')
                     ->pluck('program_guid')
                     ->push($claim->program_guid)
                     ->filter()
@@ -243,7 +243,7 @@ class ClaimController extends Controller
 
         return ProgramOffering::where('institution_guid', $user->institution->guid)
             ->where('program_year_guid', $programYear->guid)
-            ->where('active_status', true)
+            ->where('offering_status', 'approved')
             ->with('py')->orderByDesc('created_at')->get();
     }
 }

@@ -4,18 +4,10 @@
             <div class="row g-3">
 
                 <div class="col-md-12">
-                    <Label for="editInstitution" class="form-label" value="Institution" />
-                    <Select class="form-select" id="editInstitution" v-model="editOfferingForm.institution_guid">
+                    <Label for="editProgram" class="form-label" value="Program" />
+                    <Select class="form-select" id="editProgram" v-model="editOfferingForm.program_guid">
                         <option value=""></option>
-                        <option v-for="inst in institutions" :value="inst.guid" :key="inst.id">{{ inst.name }}</option>
-                    </Select>
-                </div>
-
-                <div class="col-md-12">
-                    <Label for="editProgramYear" class="form-label" value="Program Year" />
-                    <Select class="form-select" id="editProgramYear" v-model="editOfferingForm.program_year_guid">
-                        <option value=""></option>
-                        <option v-for="py in programYears" :value="py.guid" :key="py.id">{{ formatProgramYear(py) }}</option>
+                        <option v-for="prog in programs" :value="prog.guid" :key="prog.id">{{ prog.program_name }}</option>
                     </Select>
                 </div>
 
@@ -39,7 +31,7 @@
                     <Input type="date" class="form-control" id="editStudyEnd" v-model="editOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-8">
+                <div class="col-md-12">
                     <Label for="editLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="editLocation" v-model="editOfferingForm.location_name" />
                 </div>
@@ -52,17 +44,6 @@
                 <div class="col-md-6">
                     <Label for="editTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="editTotalSeats" v-model="editOfferingForm.total_seats" />
-                </div>
-
-                <div class="col-md-4">
-                    <Label for="editActiveStatus" class="form-label" value="Status" />
-                    <Select class="form-select" id="editActiveStatus" v-model="editOfferingForm.offering_status">
-                        <option value="draft">Draft</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="approved">Approved</option>
-                        <option value="declined">Declined</option>
-                        <option value="inactive">Inactive</option>
-                    </Select>
                 </div>
 
                 <div v-if="editOfferingForm.errors != undefined" class="row">
@@ -78,8 +59,11 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button @click="submitForm" type="button" class="btn btn-sm btn-success" :disabled="editOfferingForm.processing">
-                Update Offering
+            <button @click="submitForm('draft')" type="button" class="btn btn-sm btn-outline-secondary" :disabled="editOfferingForm.processing">
+                Save Draft
+            </button>
+            <button @click="submitForm('submitted')" type="button" class="btn btn-sm btn-success" :disabled="editOfferingForm.processing">
+                Submit Offering Request
             </button>
         </div>
         <FormSubmitAlert :form-state="editOfferingForm.formState" :success-msg="editOfferingForm.formSuccessMsg"
@@ -94,14 +78,12 @@ import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
 import { useForm } from '@inertiajs/vue3';
 
 export default {
-    name: 'ProgramOfferingEdit',
+    name: 'InstitutionOfferingEdit',
     components: {
         Input, Label, Select, FormSubmitAlert
     },
     props: {
-        results: Object,
-        institutions: Object,
-        programYears: Object,
+        programs: Array,
         offering: Object
     },
     data() {
@@ -109,13 +91,12 @@ export default {
             editOfferingForm: null,
             editOfferingFormData: {
                 formState: true,
-                formSuccessMsg: 'Form was submitted successfully.',
-                formFailMsg: 'There was an error submitting this form.',
+                formSuccessMsg: 'Offering saved successfully.',
+                formFailMsg: 'There was an error saving this offering.',
                 id: null,
                 guid: "",
                 program_guid: "",
                 program_year_guid: "",
-                institution_guid: "",
                 offering_name: "",
                 offering_description: "",
                 start_date: "",
@@ -128,23 +109,20 @@ export default {
         }
     },
     methods: {
-        formatProgramYear: function (py) {
-            let label = (py.start_date || '').split('T')[0] + ' to ' + (py.end_date || '').split('T')[0];
-            return label + ' (' + py.status + ')';
-        },
         toDateInput: function (value) {
             if (value !== undefined && value !== null && value !== '') {
                 return value.split("T")[0];
             }
             return "";
         },
-        submitForm: function () {
+        submitForm: function (status) {
             let vm = this;
+            this.editOfferingForm.offering_status = status;
             this.editOfferingForm.formState = null;
-            this.editOfferingForm.put('/ministry/program-offerings', {
+            this.editOfferingForm.put('/institution/offerings', {
                 onSuccess: () => {
-                    $("#editOfferingModal").modal('hide');
-                    vm.$inertia.visit('/ministry/programs/' + vm.results.id + '/offerings');
+                    $("#editInstOfferingModal").modal('hide');
+                    vm.$inertia.visit('/institution/offerings');
                     vm.$emit('close');
                 },
                 onError: () => {
@@ -159,7 +137,6 @@ export default {
         this.editOfferingFormData.guid = this.offering.guid;
         this.editOfferingFormData.program_guid = this.offering.program_guid;
         this.editOfferingFormData.program_year_guid = this.offering.program_year_guid;
-        this.editOfferingFormData.institution_guid = this.offering.institution_guid;
         this.editOfferingFormData.offering_name = this.offering.offering_name;
         this.editOfferingFormData.offering_description = this.offering.offering_description;
         this.editOfferingFormData.start_date = this.toDateInput(this.offering.start_date);

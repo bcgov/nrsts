@@ -3,6 +3,7 @@
 use Illuminate\Support\Facades\Route;
 use Modules\Institution\Http\Controllers\ClaimController;
 use Modules\Institution\Http\Controllers\InstitutionController;
+use Modules\Institution\Http\Controllers\OfferingController;
 use Modules\Institution\Http\Controllers\ProgramYearController;
 use Modules\Institution\Http\Controllers\StudentController;
 
@@ -31,6 +32,10 @@ Route::prefix('institution')->group(function () {
 
             Route::get('/students', [StudentController::class, 'index'])->name('students.index');
             Route::get('/students/{student}/{page?}', [StudentController::class, 'show'])->name('students.show');
+
+            Route::get('/offerings', [OfferingController::class, 'index'])->name('offerings.index');
+            Route::post('/offerings', [OfferingController::class, 'store'])->name('offerings.store');
+            Route::put('/offerings', [OfferingController::class, 'update'])->name('offerings.update');
 
             Route::get('/account', [InstitutionController::class, 'show'])->name('show');
 

@@ -4,18 +4,10 @@
             <div class="row g-3">
 
                 <div class="col-md-12">
-                    <Label for="inputInstitution" class="form-label" value="Institution" />
-                    <Select class="form-select" id="inputInstitution" v-model="newOfferingForm.institution_guid">
+                    <Label for="inputProgram" class="form-label" value="Program" />
+                    <Select class="form-select" id="inputProgram" v-model="newOfferingForm.program_guid">
                         <option value=""></option>
-                        <option v-for="inst in institutions" :value="inst.guid" :key="inst.id">{{ inst.name }}</option>
-                    </Select>
-                </div>
-
-                <div class="col-md-12">
-                    <Label for="inputProgramYear" class="form-label" value="Program Year" />
-                    <Select class="form-select" id="inputProgramYear" v-model="newOfferingForm.program_year_guid">
-                        <option value=""></option>
-                        <option v-for="py in programYears" :value="py.guid" :key="py.id">{{ formatProgramYear(py) }}</option>
+                        <option v-for="prog in programs" :value="prog.guid" :key="prog.id">{{ prog.program_name }}</option>
                     </Select>
                 </div>
 
@@ -39,7 +31,7 @@
                     <Input type="date" class="form-control" id="inputStudyEnd" v-model="newOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-8">
+                <div class="col-md-12">
                     <Label for="inputLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="inputLocation" v-model="newOfferingForm.location_name" />
                 </div>
@@ -52,17 +44,6 @@
                 <div class="col-md-6">
                     <Label for="inputTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="inputTotalSeats" v-model="newOfferingForm.total_seats" />
-                </div>
-
-                <div class="col-md-4">
-                    <Label for="inputActiveStatus" class="form-label" value="Status" />
-                    <Select class="form-select" id="inputActiveStatus" v-model="newOfferingForm.offering_status">
-                        <option value="draft">Draft</option>
-                        <option value="submitted">Submitted</option>
-                        <option value="approved">Approved</option>
-                        <option value="declined">Declined</option>
-                        <option value="inactive">Inactive</option>
-                    </Select>
                 </div>
 
                 <div v-if="newOfferingForm.errors != undefined" class="row">
@@ -78,8 +59,11 @@
             </div>
         </div>
         <div class="modal-footer">
-            <button @click="submitForm" type="button" class="btn btn-sm btn-success" :disabled="newOfferingForm.processing">
-                Create Offering
+            <button @click="submitForm('draft')" type="button" class="btn btn-sm btn-outline-secondary" :disabled="newOfferingForm.processing">
+                Save Draft
+            </button>
+            <button @click="submitForm('submitted')" type="button" class="btn btn-sm btn-success" :disabled="newOfferingForm.processing">
+                Submit Offering Request
             </button>
         </div>
         <FormSubmitAlert :form-state="newOfferingForm.formState" :success-msg="newOfferingForm.formSuccessMsg"
@@ -94,25 +78,21 @@ import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
 import { useForm } from '@inertiajs/vue3';
 
 export default {
-    name: 'ProgramOfferingCreate',
+    name: 'InstitutionOfferingCreate',
     components: {
         Input, Label, Select, FormSubmitAlert
     },
     props: {
-        results: Object,
-        institutions: Object,
-        programYears: Object
+        programs: Array
     },
     data() {
         return {
             newOfferingForm: null,
             newOfferingFormData: {
                 formState: true,
-                formSuccessMsg: 'Form was submitted successfully.',
-                formFailMsg: 'There was an error submitting this form.',
+                formSuccessMsg: 'Offering saved successfully.',
+                formFailMsg: 'There was an error saving this offering.',
                 program_guid: "",
-                program_year_guid: "",
-                institution_guid: "",
                 offering_name: "",
                 offering_description: "",
                 start_date: "",
@@ -125,17 +105,14 @@ export default {
         }
     },
     methods: {
-        formatProgramYear: function (py) {
-            let label = (py.start_date || '').split('T')[0] + ' to ' + (py.end_date || '').split('T')[0];
-            return label + ' (' + py.status + ')';
-        },
-        submitForm: function () {
+        submitForm: function (status) {
+            this.newOfferingForm.offering_status = status;
             this.newOfferingForm.formState = null;
-            this.newOfferingForm.post('/ministry/program-offerings', {
+            this.newOfferingForm.post('/institution/offerings', {
                 onSuccess: () => {
-                    $("#newOfferingModal").modal('hide');
+                    $("#newInstOfferingModal").modal('hide');
                     this.newOfferingForm.reset(this.newOfferingFormData);
-                    this.$inertia.visit('/ministry/programs/' + this.results.id + '/offerings');
+                    this.$inertia.visit('/institution/offerings');
                 },
                 onError: () => {
                     this.newOfferingForm.formState = false;
@@ -146,13 +123,6 @@ export default {
     },
     mounted() {
         this.newOfferingForm = useForm(this.newOfferingFormData);
-        this.newOfferingForm.program_guid = this.results.guid;
-
-        // Default the offering to the active program year when one exists.
-        let activePy = (this.programYears || []).find(py => py.status === 'active');
-        if (activePy) {
-            this.newOfferingForm.program_year_guid = activePy.guid;
-        }
     }
 }
 </script>

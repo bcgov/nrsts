@@ -46,7 +46,7 @@ class ClaimController extends Controller
                 // Programs are global; the ones relevant to this claim are those with an
                 // active offering at the claim's institution (plus the claim's current program).
                 $programGuids = ProgramOffering::where('institution_guid', $claim->institution_guid)
-                    ->where('active_status', true)
+                    ->where('offering_status', 'approved')
                     ->pluck('program_guid')
                     ->push($claim->program_guid)
                     ->filter()

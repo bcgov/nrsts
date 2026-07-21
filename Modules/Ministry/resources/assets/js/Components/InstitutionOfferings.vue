@@ -39,7 +39,10 @@
                             <td>{{ formatDate(row.start_date) }}</td>
                             <td>{{ formatDate(row.end_date) }}</td>
                             <td>
-                                <span v-if="row.active_status" class="badge rounded-pill text-bg-success">Active</span>
+                                <span v-if="row.offering_status === 'approved'" class="badge rounded-pill text-bg-success">Approved</span>
+                                <span v-else-if="row.offering_status === 'submitted'" class="badge rounded-pill text-bg-info">Submitted</span>
+                                <span v-else-if="row.offering_status === 'draft'" class="badge rounded-pill text-bg-secondary">Draft</span>
+                                <span v-else-if="row.offering_status === 'declined'" class="badge rounded-pill text-bg-warning">Declined</span>
                                 <span v-else class="badge rounded-pill text-bg-danger">Inactive</span>
                             </td>
                         </tr>

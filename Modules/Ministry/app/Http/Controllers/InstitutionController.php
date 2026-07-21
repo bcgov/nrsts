@@ -71,11 +71,11 @@ class InstitutionController extends Controller
 
         $institution->update($request->safe()->except('last_touch_by_user_guid'));
 
-        // Deactivating an institution cascades to all of its offerings.
+        // Deactivating an institution cascades to all of its approved offerings.
         if (! $institution->active_status) {
             ProgramOffering::where('institution_guid', $institution->guid)
-                ->where('active_status', true)
-                ->update(['active_status' => false]);
+                ->where('offering_status', 'approved')
+                ->update(['offering_status' => 'inactive']);
         }
 
         return Redirect::route('ministry.institutions.show', [$request->id]);

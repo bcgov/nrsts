@@ -47,6 +47,13 @@ nav.navbar .form-select {
                             Applications
                         </NavLink>
                     </li>
+                    <li class="nav-item">
+                        <NavLink class="nav-link" href="/institution/offerings"
+                                 :class="{ 'active':
+                                     $page.url.indexOf('/offerings') > -1  }">
+                            Offerings
+                        </NavLink>
+                    </li>
                     <li v-if="isAdmin" class="nav-item">
                         <NavLink class="nav-link" href="/institution/account"
                                  :class="{ 'active': $page.url.indexOf('/account') > -1 ||

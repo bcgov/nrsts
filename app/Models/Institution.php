@@ -52,7 +52,7 @@ class Institution extends Model
     public function activeOfferings()
     {
         return $this->hasMany(ProgramOffering::class, 'institution_guid', 'guid')
-            ->where('active_status', true);
+            ->where('offering_status', 'approved');
     }
 
     /**

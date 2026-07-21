@@ -65,11 +65,10 @@ class ApplicationControllerTest extends TestCase
             'institution_guid'  => $institution->guid,
             'program_guid'      => $program->guid,
             'program_year_guid' => $programYear->guid,
-            'active_status'     => true,
+            'offering_status'   => 'approved',
         ]);
 
         $storeData = array_merge($this->profilePayload(), [
-            'institution_guid'       => $institution->guid,
             'program_guid'           => $program->guid,
             'claim_status'           => 'Submitted',
         ]);
@@ -108,7 +107,7 @@ class ApplicationControllerTest extends TestCase
             'institution_guid'  => $institution->guid,
             'program_guid'      => $program->guid,
             'program_year_guid' => $programYear->guid,
-            'active_status'     => true,
+            'offering_status'   => 'approved',
         ]);
 
         // Create a Claim record with initial valid data.

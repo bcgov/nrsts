@@ -23,10 +23,10 @@ class ProgramController extends Controller
     {
         $programs = Program::query()
             ->withCount(['offerings' => function ($query) {
-                $query->where('active_status', true);
+                $query->where('offering_status', 'approved');
             }])
             ->withSum(['offerings' => function ($query) {
-                $query->where('active_status', true);
+                $query->where('offering_status', 'approved');
             }], 'total_seats');
 
         if (request()->filter_name !== null) {
@@ -109,11 +109,11 @@ class ProgramController extends Controller
             collect($request->validated())->except('id')->toArray()
         );
 
-        // Deactivating a program cascades to all of its offerings.
+        // Deactivating a program cascades to all of its approved offerings.
         if (! $program->active_status) {
             ProgramOffering::where('program_guid', $program->guid)
-                ->where('active_status', true)
-                ->update(['active_status' => false]);
+                ->where('offering_status', 'approved')
+                ->update(['offering_status' => 'inactive']);
         }
 
         return Redirect::route('ministry.programs.show', [$request->id]);

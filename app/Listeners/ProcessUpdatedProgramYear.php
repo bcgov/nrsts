@@ -31,13 +31,14 @@ class ProcessUpdatedProgramYear
 
             // Activate the offerings that belong to the now active program year.
             ProgramOffering::where('program_year_guid', $programYear->guid)
-                ->update(['active_status' => true]);
+                ->update(['offering_status' => 'approved']);
 
-            // Deactivate offerings that belong to the now inactive program years.
+            // Deactivate approved offerings that belong to the now inactive program years.
             // Offerings are linked to a program year via program_year_guid.
             ProgramOffering::whereNotNull('program_year_guid')
                 ->where('program_year_guid', '!=', $programYear->guid)
-                ->update(['active_status' => false]);
+                ->where('offering_status', 'approved')
+                ->update(['offering_status' => 'inactive']);
         }
     }
 }

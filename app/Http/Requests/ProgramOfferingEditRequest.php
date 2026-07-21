@@ -38,7 +38,7 @@ class ProgramOfferingEditRequest extends FormRequest
             'location_name' => 'nullable',
             'total_amount' => ['required', 'numeric', 'min:0', new OfferingWithinProgramYearBudget($this->program_year_guid, $this->guid)],
             'total_seats' => 'required|integer|min:0',
-            'active_status' => 'required|boolean',
+            'offering_status' => 'required|in:draft,submitted,approved,inactive,declined',
             'updated_by_guid' => 'required|exists:users,guid',
         ];
     }
@@ -62,7 +62,6 @@ class ProgramOfferingEditRequest extends FormRequest
     protected function prepareForValidation()
     {
         $this->merge([
-            'active_status' => $this->toBoolean($this->active_status),
             'updated_by_guid' => $this->user()->guid,
         ]);
     }
