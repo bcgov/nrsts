@@ -3,6 +3,7 @@
 namespace Modules\Institution\Http\Requests;
 
 use App\Models\ProgramYear;
+use App\Models\Util;
 use App\Rules\OfferingWithinProgramYearBudget;
 use Illuminate\Foundation\Http\FormRequest;
 use Illuminate\Support\Str;
@@ -67,10 +68,17 @@ class InstitutionOfferingStoreRequest extends FormRequest
         $institution = $this->user()->institution;
         $activeProgramYear = ProgramYear::where('status', 'active')->first();
 
+        // The offering budget is derived, not entered by the institution:
+        // total seats x the Ministry's weekly support payment amount.
+        $supportPaymentPerWeek = (float) (Util::where('field_type', 'Support Payment Per Week')
+            ->where('active_flag', true)
+            ->value('field_name') ?? 0);
+
         $this->merge([
             'guid' => Str::orderedUuid()->getHex(),
             'institution_guid' => $institution?->guid,
             'program_year_guid' => $activeProgramYear?->guid,
+            'total_amount' => (int) $this->total_seats * $supportPaymentPerWeek,
             'offering_status' => $this->offering_status === 'submitted' ? 'submitted' : 'draft',
             'created_by_guid' => $this->user()->guid,
             'updated_by_guid' => $this->user()->guid,

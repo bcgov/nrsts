@@ -36,12 +36,7 @@
                     <Input type="text" class="form-control" id="inputLocation" v-model="newOfferingForm.location_name" />
                 </div>
 
-                <div class="col-md-6">
-                    <Label for="inputTotalAmount" class="form-label" value="Total Budget" />
-                    <Input type="number" step="0.01" min="0" class="form-control" id="inputTotalAmount" v-model="newOfferingForm.total_amount" />
-                </div>
-
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <Label for="inputTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="inputTotalSeats" v-model="newOfferingForm.total_seats" />
                 </div>
@@ -98,7 +93,6 @@ export default {
                 start_date: "",
                 end_date: "",
                 location_name: "",
-                total_amount: 0,
                 total_seats: 0,
                 offering_status: 'draft',
             },

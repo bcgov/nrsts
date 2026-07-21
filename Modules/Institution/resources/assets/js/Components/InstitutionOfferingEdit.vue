@@ -36,12 +36,7 @@
                     <Input type="text" class="form-control" id="editLocation" v-model="editOfferingForm.location_name" />
                 </div>
 
-                <div class="col-md-6">
-                    <Label for="editTotalAmount" class="form-label" value="Total Budget" />
-                    <Input type="number" step="0.01" min="0" class="form-control" id="editTotalAmount" v-model="editOfferingForm.total_amount" />
-                </div>
-
-                <div class="col-md-6">
+                <div class="col-md-12">
                     <Label for="editTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="editTotalSeats" v-model="editOfferingForm.total_seats" />
                 </div>
@@ -102,7 +97,6 @@ export default {
                 start_date: "",
                 end_date: "",
                 location_name: "",
-                total_amount: 0,
                 total_seats: 0,
                 offering_status: 'draft',
             },
@@ -142,7 +136,6 @@ export default {
         this.editOfferingFormData.start_date = this.toDateInput(this.offering.start_date);
         this.editOfferingFormData.end_date = this.toDateInput(this.offering.end_date);
         this.editOfferingFormData.location_name = this.offering.location_name;
-        this.editOfferingFormData.total_amount = this.offering.total_amount;
         this.editOfferingFormData.total_seats = this.offering.total_seats;
         this.editOfferingFormData.offering_status = this.offering.offering_status;
 

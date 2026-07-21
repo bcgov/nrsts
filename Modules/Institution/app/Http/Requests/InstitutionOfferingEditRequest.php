@@ -3,6 +3,7 @@
 namespace Modules\Institution\Http\Requests;
 
 use App\Models\ProgramOffering;
+use App\Models\Util;
 use App\Rules\OfferingWithinProgramYearBudget;
 use Illuminate\Foundation\Http\FormRequest;
 
@@ -75,8 +76,15 @@ class InstitutionOfferingEditRequest extends FormRequest
     {
         $institution = $this->user()->institution;
 
+        // The offering budget is derived, not entered by the institution:
+        // total seats x the Ministry's weekly support payment amount.
+        $supportPaymentPerWeek = (float) (Util::where('field_type', 'Support Payment Per Week')
+            ->where('active_flag', true)
+            ->value('field_name') ?? 0);
+
         $this->merge([
             'institution_guid' => $institution?->guid,
+            'total_amount' => (int) $this->total_seats * $supportPaymentPerWeek,
             'offering_status' => $this->offering_status === 'submitted' ? 'submitted' : 'draft',
             'updated_by_guid' => $this->user()->guid,
         ]);
