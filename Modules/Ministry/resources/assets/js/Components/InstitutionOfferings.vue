@@ -26,10 +26,7 @@
                     </thead>
                     <tbody>
                         <tr v-for="row in filteredOfferings" :key="row.id">
-                            <td>
-                                <Link v-if="row.program" :href="'/ministry/programs/' + row.program.id + '/offerings'">{{ row.offering_name }}</Link>
-                                <span v-else>{{ row.offering_name }}</span>
-                            </td>
+                            <td><a href="#" @click.prevent="openEditForm(row)">{{ row.offering_name }}</a></td>
                             <td>
                                 <Link v-if="row.program" :href="'/ministry/programs/' + row.program.id">{{ row.program.program_name }}</Link>
                                 <span v-else>—</span>
@@ -52,21 +49,41 @@
             <h1 v-else class="lead">No results</h1>
         </div>
     </div>
+
+    <div v-if="editOffering != ''" class="modal modal-lg fade" id="editOfferingModal" tabindex="-1"
+         aria-labelledby="editOfferingModalLabel" aria-hidden="true" data-bs-backdrop="static">
+        <div class="modal-dialog">
+            <div class="modal-content">
+                <div class="modal-header">
+                    <h5 class="modal-title" id="editOfferingModalLabel">Edit Program Offering</h5>
+                    <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <ProgramOfferingEdit v-bind="$attrs" :results="results" :institutions="[results]"
+                                     :program-years="programYears" :offering="editOffering"
+                                     :institution-readonly="true" :support-payment-per-week="supportPaymentPerWeek"
+                                     :redirect-url="'/ministry/institutions/' + results.id + '/offerings'"
+                                     @close="closeEditForm" />
+            </div>
+        </div>
+    </div>
 </template>
 <script>
 import { Link } from '@inertiajs/vue3';
+import ProgramOfferingEdit from "./ProgramOfferingEdit";
 
 export default {
     name: 'InstitutionOfferings',
     components: {
-        Link
+        Link, ProgramOfferingEdit
     },
     props: {
         results: Object,
-        programYears: Object
+        programYears: Object,
+        supportPaymentPerWeek: [Number, String]
     },
     data() {
         return {
+            editOffering: '',
             selectedProgramYear: 'all'
         }
     },
@@ -82,6 +99,19 @@ export default {
         }
     },
     methods: {
+        openEditForm(offering) {
+            this.editOffering = offering;
+            setTimeout(function () {
+                $("#editOfferingModal").modal('show');
+            }, 10);
+        },
+        closeEditForm() {
+            $("#editOfferingModal").modal('hide');
+            let vm = this;
+            setTimeout(function () {
+                vm.editOffering = '';
+            }, 1000);
+        },
         formatDate(value) {
             if (value !== undefined && value !== null && value !== '') {
                 return value.split('T')[0];

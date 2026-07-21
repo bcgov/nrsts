@@ -5,10 +5,11 @@
 
                 <div class="col-md-12">
                     <Label for="editInstitution" class="form-label" value="Institution" />
-                    <Select class="form-select" id="editInstitution" v-model="editOfferingForm.institution_guid">
+                    <Select v-if="!institutionReadonly" class="form-select" id="editInstitution" v-model="editOfferingForm.institution_guid">
                         <option value=""></option>
                         <option v-for="inst in institutions" :value="inst.guid" :key="inst.id">{{ inst.name }}</option>
                     </Select>
+                    <Input v-else type="text" class="form-control" id="editInstitution" :value="institutionName" readonly disabled />
                 </div>
 
                 <div class="col-md-12">
@@ -46,7 +47,10 @@
 
                 <div class="col-md-6">
                     <Label for="editTotalAmount" class="form-label" value="Total Budget" />
-                    <Input type="number" step="0.01" min="0" class="form-control" id="editTotalAmount" v-model="editOfferingForm.total_amount" />
+                    <Input v-if="!isBudgetDerived" type="number" step="0.01" min="0" class="form-control" id="editTotalAmount" v-model="editOfferingForm.total_amount" />
+                    <div v-else class="form-control-plaintext">
+                        {{ formatMoney(supportPaymentPerWeek) }} &times; {{ editOfferingForm.total_seats || 0 }} = <strong>{{ formatMoney(computedTotalAmount) }}</strong>
+                    </div>
                 </div>
 
                 <div class="col-md-6">
@@ -102,7 +106,19 @@ export default {
         results: Object,
         institutions: Object,
         programYears: Object,
-        offering: Object
+        offering: Object,
+        redirectUrl: {
+            type: String,
+            default: ''
+        },
+        institutionReadonly: {
+            type: Boolean,
+            default: false
+        },
+        supportPaymentPerWeek: {
+            type: [Number, String],
+            default: 0
+        }
     },
     data() {
         return {
@@ -127,7 +143,25 @@ export default {
             },
         }
     },
+    computed: {
+        institutionName() {
+            if (!this.editOfferingForm) return '';
+            let match = (this.institutions || []).find(i => i.guid === this.editOfferingForm.institution_guid);
+            return match ? match.name : '';
+        },
+        isBudgetDerived() {
+            return Number(this.supportPaymentPerWeek) > 0;
+        },
+        computedTotalAmount() {
+            if (!this.editOfferingForm) return 0;
+            return Number(this.supportPaymentPerWeek) * Number(this.editOfferingForm.total_seats || 0);
+        }
+    },
     methods: {
+        formatMoney: function (value) {
+            let num = Number(value || 0);
+            return '$' + num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
         formatProgramYear: function (py) {
             let label = (py.start_date || '').split('T')[0] + ' to ' + (py.end_date || '').split('T')[0];
             return label + ' (' + py.status + ')';
@@ -140,11 +174,15 @@ export default {
         },
         submitForm: function () {
             let vm = this;
+            if (this.isBudgetDerived) {
+                this.editOfferingForm.total_amount = this.computedTotalAmount;
+            }
             this.editOfferingForm.formState = null;
             this.editOfferingForm.put('/ministry/program-offerings', {
                 onSuccess: () => {
                     $("#editOfferingModal").modal('hide');
-                    vm.$inertia.visit('/ministry/programs/' + vm.results.id + '/offerings');
+                    let target = vm.redirectUrl !== '' ? vm.redirectUrl : '/ministry/programs/' + vm.results.id + '/offerings';
+                    vm.$inertia.visit(target);
                     vm.$emit('close');
                 },
                 onError: () => {

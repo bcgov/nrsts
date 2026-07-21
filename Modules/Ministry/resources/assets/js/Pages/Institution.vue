@@ -18,7 +18,7 @@
                     </div>
                     <div class="col-md-9 mb-3">
                         <InstitutionDetails v-bind="$attrs" v-if="page === 'details'" :results="results"></InstitutionDetails>
-                        <InstitutionOfferings v-bind="$attrs" v-if="page === 'offerings'" :results="results" :program-years="programYears"></InstitutionOfferings>
+                        <InstitutionOfferings v-bind="$attrs" v-if="page === 'offerings'" :results="results" :program-years="programYears" :support-payment-per-week="supportPaymentPerWeek"></InstitutionOfferings>
                         <InstitutionStaff v-bind="$attrs" v-if="page === 'staff'" :results="results"></InstitutionStaff>
                         <InstitutionClaimsByCourse v-bind="$attrs" v-if="page === 'claims-by-course'" :results="results"></InstitutionClaimsByCourse>
                         <InstitutionClaimsByStudent v-bind="$attrs" v-if="page === 'claims-by-student'" :results="results"></InstitutionClaimsByStudent>
@@ -51,7 +51,8 @@ export default {
         page: String,
         countries: Object,
         programYears: Object,
-        activeClaims: Object
+        activeClaims: Object,
+        supportPaymentPerWeek: [Number, String]
     },
     mounted() {
     }

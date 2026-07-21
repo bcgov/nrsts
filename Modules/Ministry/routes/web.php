@@ -39,6 +39,7 @@ Route::prefix('ministry')->group(function () {
             Route::get('/programs', [ProgramController::class, 'index'])->name('programs.index');
             Route::post('/program-offerings', [ProgramOfferingController::class, 'store'])->name('program_offerings.store');
             Route::put('/program-offerings', [ProgramOfferingController::class, 'update'])->name('program_offerings.update');
+            Route::get('/offerings', [ProgramOfferingController::class, 'index'])->name('offerings.index');
             Route::get('/programs/{program}/{page?}', [ProgramController::class, 'show'])->name('programs.show');
 
             Route::get('/claims', [ClaimController::class, 'index'])->name('claims.index');

@@ -8,6 +8,7 @@ use App\Models\Institution;
 use App\Models\Program;
 use App\Models\ProgramOffering;
 use App\Models\ProgramYear;
+use App\Models\Util;
 use App\Services\PdexService;
 use Illuminate\Http\RedirectResponse;
 use Illuminate\Http\Request;
@@ -49,6 +50,11 @@ class InstitutionController extends Controller
             return ProgramYear::orderBy('guid')->get();
         });
 
+        // The offering budget is derived: total seats x the Ministry's weekly support payment amount.
+        $supportPaymentPerWeek = (float) (Util::where('field_type', 'Support Payment Per Week')
+            ->where('active_flag', true)
+            ->value('field_name') ?? 0);
+
         $pdexInstitution = null;
         $pdexSites = null;
 
@@ -59,6 +65,7 @@ class InstitutionController extends Controller
 
         return Inertia::render('Ministry::Institution', ['page' => $page, 'results' => $institution,
             'countries' => $countries, 'programYears' => $program_years,
+            'supportPaymentPerWeek' => $supportPaymentPerWeek,
             'pdexInstitution' => $pdexInstitution, 'pdexSites' => $pdexSites]);
     }
 

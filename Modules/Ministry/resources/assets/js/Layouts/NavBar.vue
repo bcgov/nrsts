@@ -40,6 +40,12 @@ nav.navbar .form-select {
                         </NavLink>
                     </li>
                     <li class="nav-item">
+                        <NavLink class="nav-link" href="/ministry/offerings"
+                                 :class="{ 'active': $page.url.indexOf('/offerings') > -1 }">
+                            Offerings
+                        </NavLink>
+                    </li>
+                    <li class="nav-item">
                         <NavLink class="nav-link" href="/ministry/claims"
                                  :class="{ 'active': $page.url.indexOf('/claims') > -1 }">
                             Applications
