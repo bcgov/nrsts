@@ -40,9 +40,13 @@
                     <Input type="date" class="form-control" id="editStudyEnd" v-model="editOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <Label for="editLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="editLocation" v-model="editOfferingForm.location_name" />
+                </div>
+                <div class="col-md-6">
+                    <Label for="editTotalSeats" class="form-label" value="Total Seats" />
+                    <Input type="number" min="0" class="form-control" id="editTotalSeats" v-model="editOfferingForm.total_seats" />
                 </div>
 
                 <div class="col-md-6">
@@ -53,10 +57,6 @@
                     </div>
                 </div>
 
-                <div class="col-md-6">
-                    <Label for="editTotalSeats" class="form-label" value="Total Seats" />
-                    <Input type="number" min="0" class="form-control" id="editTotalSeats" v-model="editOfferingForm.total_seats" />
-                </div>
 
                 <div class="col-md-4">
                     <Label for="editActiveStatus" class="form-label" value="Status" />

@@ -33,6 +33,11 @@ class StudentController extends Controller
                             ->where('program_year_guid', $activeProgramYearGuid)
                             ->where('institution_guid', $institution->guid);
                     })
+                    ->with(['offerings' => function ($query) use ($activeProgramYearGuid, $institution) {
+                        $query->where('offering_status', 'approved')
+                            ->where('program_year_guid', $activeProgramYearGuid)
+                            ->where('institution_guid', $institution->guid);
+                    }])
                     ->orderBy('program_name')
                     ->get();
 

@@ -20,7 +20,7 @@
                         <Select class="form-select" id="inputProgramGuid" v-model="newApplicationForm.program_guid">
                             <option></option>
                             <template  v-for="p in programs">
-                                <option v-if="p.active_status === true" :value="p.guid">{{ p.program_name }}</option>
+                                <option v-if="p.active_status === true" :value="p.guid">{{ programLabel(p) }}</option>
                             </template>
                         </Select>
                     </div>
@@ -104,6 +104,19 @@ export default {
         }
     },
     methods: {
+        // Build the program option label as "Program Name (start to end)" using the offering dates.
+        programLabel: function (p) {
+            let label = p.program_name;
+            if (p.offerings && p.offerings.length > 0) {
+                let offering = p.offerings[0];
+                let start = offering.start_date ? offering.start_date.split('T')[0] : '';
+                let end = offering.end_date ? offering.end_date.split('T')[0] : '';
+                if (start || end) {
+                    label += ' (' + start + ' to ' + end + ')';
+                }
+            }
+            return label;
+        },
         save: function () {
             this.newApplicationForm.claim_status = 'Draft';
             this.submitForm();

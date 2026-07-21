@@ -39,7 +39,7 @@
                     <Input type="date" class="form-control" id="inputStudyEnd" v-model="newOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-8">
+                <div class="col-md-6">
                     <Label for="inputLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="inputLocation" v-model="newOfferingForm.location_name" />
                 </div>
@@ -54,7 +54,7 @@
                     <Input type="number" min="0" class="form-control" id="inputTotalSeats" v-model="newOfferingForm.total_seats" />
                 </div>
 
-                <div class="col-md-4">
+                <div class="col-md-6">
                     <Label for="inputActiveStatus" class="form-label" value="Status" />
                     <Select class="form-select" id="inputActiveStatus" v-model="newOfferingForm.offering_status">
                         <option value="draft">Draft</option>
