@@ -31,12 +31,12 @@
                     <Input type="date" class="form-control" id="inputStudyEnd" v-model="newOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-12">
+                <div class="col-md-6">
                     <Label for="inputLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="inputLocation" v-model="newOfferingForm.location_name" />
                 </div>
 
-                <div class="col-md-12">
+                <div class="col-md-6">
                     <Label for="inputTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="inputTotalSeats" v-model="newOfferingForm.total_seats" />
                 </div>
