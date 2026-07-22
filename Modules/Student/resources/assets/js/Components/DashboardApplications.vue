@@ -17,10 +17,12 @@
                             <td><a href="#" @click="openEditForm(row)">{{ row.program?.program_name || '—' }}</a></td>
                             <td>{{ row.institution?.name || '—' }}</td>
                             <td>
-                                <span v-if="row.offering?.py">{{ showYear(row.offering.py.start_date) }} - {{ showYear(row.offering.py.end_date) }}</span>
+                                <span v-if="row.offering && (row.offering.start_date || row.offering.end_date)">
+                                    {{ formatDate(row.offering.start_date) }} - {{ formatDate(row.offering.end_date) }}
+                                </span>
                                 <span v-else>—</span>
                             </td>
-                            <td>${{ row.total_claim_amount }}</td>
+                            <td>{{ row.ei_reference_code || '—' }}</td>
 <!--                            <td>${{ row.student.total_grant }}</td>-->
                             <td>
                                 <span v-if="row.claim_status === 'Draft'" class="badge rounded-pill text-bg-info">Draft</span>
@@ -52,51 +54,39 @@
             </div>
             <h1 v-else class="lead">No applications</h1>
         </div>
-        <div v-if="claims != null && claims.data != null && claims.data.length > 0" class="card-footer">
-            <fieldset>
-                <legend>Application Status Definitions </legend>
-                    <p><span class="badge rounded-pill text-bg-primary">Submitted</span> <small>Your application has been sent to the institute for review. </small></p>
-                    <p><span class="badge rounded-pill text-bg-warning">Training Started</span> <small>You have started your apprentice program. </small></p>
-                    <p><span class="badge rounded-pill text-bg-warning">Training Ended</span> <small>You have completed your training and reported your exit employment status. </small></p>
-                    <p><span class="badge rounded-pill text-bg-success">Completed</span> <small>The institution has finalized your program. </small></p>
-                    <p><span class="badge rounded-pill text-bg-secondary">Cancelled</span> <small>The institution has withdrawn a previously reserved grant amount for your program.</small></p>
-                    <p><span class="badge rounded-pill text-bg-danger">Expired</span> <small>The hold period for the grant application has ended.</small></p>
-                    <p><span class="badge rounded-pill text-bg-danger">Declined</span> <small>Your application has been declined by the institution.</small></p>
-                    <p><span class="badge rounded-pill text-bg-danger">Dropped Out</span> <small>You have dropped out of your program.</small></p>
-            </fieldset>
-        </div>
+    
 
-            <div v-if="editApplication == ''" class="modal modal-xl fade" id="newApplicationModal" tabindex="-1"
-                 aria-labelledby="newApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="newApplicationModalLabel">New Student Application</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <StudentApplicationCreate v-if="institutions != '' && institutions.length > 0" v-bind="$attrs" :results="results" :institutions="institutions" />
+        <div v-if="editApplication == ''" class="modal modal-xl fade" id="newApplicationModal" tabindex="-1"
+                aria-labelledby="newApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="newApplicationModalLabel">New Student Application</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <StudentApplicationCreate v-if="institutions != '' && institutions.length > 0" v-bind="$attrs" :results="results" :institutions="institutions" />
                 </div>
             </div>
-            <div v-if="editApplication != ''" class="modal modal-xl fade" id="editApplicationModal" tabindex="0"
-                 aria-labelledby="editApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
-                <div class="modal-dialog">
-                    <div class="modal-content">
-                        <div class="modal-header">
-                            <h5 class="modal-title" id="editApplicationModalLabel">Edit Application</h5>
-                            <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
-                        </div>
-                        <StudentApplicationEdit v-if="editApplication.claim_status === 'Draft'" v-bind="$attrs" @close="closeEditForm"
-                                                :application="editApplication"
-                                                :institutions="institutions"
-                                                :results="results" />
-                        <StudentApplicationReadOnly v-else v-bind="$attrs" @close="closeEditForm"
-                                                :application="editApplication"
-                                                :institutions="institutions"
-                                                :results="results" />
+        </div>
+        <div v-if="editApplication != ''" class="modal modal-xl fade" id="editApplicationModal" tabindex="0"
+                aria-labelledby="editApplicationModalLabel" aria-hidden="true" data-bs-backdrop="static">
+            <div class="modal-dialog">
+                <div class="modal-content">
+                    <div class="modal-header">
+                        <h5 class="modal-title" id="editApplicationModalLabel">Edit Application</h5>
+                        <button type="button" class="btn-close" data-bs-dismiss="modal" aria-label="Close"></button>
                     </div>
+                    <StudentApplicationEdit v-if="editApplication.claim_status === 'Draft'" v-bind="$attrs" @close="closeEditForm"
+                                            :application="editApplication"
+                                            :institutions="institutions"
+                                            :results="results" />
+                    <StudentApplicationReadOnly v-else v-bind="$attrs" @close="closeEditForm"
+                                            :application="editApplication"
+                                            :institutions="institutions"
+                                            :results="results" />
                 </div>
             </div>
+        </div>
     </div>
 
 </template>

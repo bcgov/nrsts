@@ -132,13 +132,26 @@ class ApplicationController extends Controller
         $providerUser = json_decode($request->session()->get('bcsc_provider_user_' . $user->id));
         $individualData = json_decode($request->session()->get('bcsc_pdex_individual_' . $user->id), true);
 
+        $claimPrefill = $this->buildClaimPrefill($individualData);
+
+        // Diagnostics (no PII): confirm the session carried PDEX applicant data
+        // and how many claim fields were prefilled, to trace blank fields on prod.
+        \Log::info('Student applications prefill', [
+            'user_id' => $user->id,
+            'session_individual_present' => $request->session()->has('bcsc_pdex_individual_' . $user->id),
+            'individual_data_is_array' => is_array($individualData),
+            'individual_wrapper_keys' => is_array($individualData['individual'] ?? null) ? array_keys($individualData['individual']) : [],
+            'prefill_keys' => array_keys($claimPrefill),
+            'prefill_count' => count($claimPrefill),
+        ]);
+
         return Inertia::render('Student::Dashboard', [
             'status' => true,
             'results' => $user,
             'page' => $page,
             'providerUser' => $providerUser,
             'individual_data' => $individualData,
-            'claim_prefill' => $this->buildClaimPrefill($individualData),
+            'claim_prefill' => $claimPrefill,
             'studentUtils' => app(PdexService::class)->studentUtils(),
         ]);
     }
@@ -227,6 +240,16 @@ class ApplicationController extends Controller
         if (! empty($prefill['country'])) {
             $prefill['country'] = ucwords(strtolower((string) $prefill['country']));
         }
+
+        // Diagnostics (no PII): compare the applicant keys received against the
+        // keys actually prefilled, and whether the select option lists were
+        // available for value->label translation (empty lists blank selects).
+        \Log::info('PDEX buildClaimPrefill', [
+            'individual_non_empty_keys' => array_keys(array_filter($individual, fn ($v) => $v !== null && $v !== '')),
+            'prefill_keys' => array_keys($prefill),
+            'select_option_lists_present' => array_keys(array_filter($options, fn ($o) => ! empty($o))),
+            'student_utils_options_empty' => empty($options),
+        ]);
 
         return $prefill;
     }

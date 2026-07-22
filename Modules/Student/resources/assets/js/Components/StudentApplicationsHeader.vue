@@ -8,10 +8,10 @@
             <span>Institution Name</span>
         </th>
         <th scope="col" class="text-nowrap">
-            <span>Program Year</span>
+            <span>Start/End Date</span>
         </th>
         <th scope="col" class="text-nowrap">
-            <span>Claim Total</span>
+            <span>EI Reference Code</span>
         </th>
 <!--        <th scope="col" class="text-nowrap">-->
 <!--            <span>Claims</span>-->

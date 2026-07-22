@@ -266,6 +266,18 @@ class UserController extends Controller
             $normalized[$canonicalKey] = $value;
         }
 
+        // Diagnostics (no PII): confirm the shape of the PDEX individual payload
+        // and which canonical fields resolved so blank-prefill issues can be
+        // traced in prod without logging sensitive values.
+        \Log::info('PDEX individual normalize', [
+            'source_type' => gettype($decodedIndividualToken),
+            'top_level_keys' => is_array($data) ? array_keys($data) : [],
+            'has_individual_wrapper' => is_array($data['individual'] ?? null),
+            'individual_keys' => is_array($individual) ? array_keys($individual) : [],
+            'resolved_non_null' => array_keys(array_filter($normalized, fn ($v) => $v !== null && $v !== '')),
+            'resolved_null' => array_keys(array_filter($normalized, fn ($v) => $v === null || $v === '')),
+        ]);
+
         return [
             'user_guid' => $data['user_guid'] ?? null,
             'user_email' => $data['user_email'] ?? null,
@@ -344,6 +356,17 @@ class UserController extends Controller
         // nests an "individual" object). When no individual token is provided,
         // fall back to any data embedded in the main token payload.
         $individualSource = $decodedIndividualToken ?? ($decodedToken['payload']['individual_data'] ?? null);
+
+        // Diagnostics (no PII): trace whether an individual token arrived and
+        // was decoded, so blank student-prefill on prod can be pinpointed.
+        \Log::info('PDEX individual source resolved', [
+            'user_type' => $userType,
+            'individual_token_present' => ! empty($individualToken),
+            'decoded_individual_present' => ! is_null($decodedIndividualToken),
+            'fallback_used' => is_null($decodedIndividualToken) && isset($decodedToken['payload']['individual_data']),
+            'source_present' => ! is_null($individualSource),
+            'source_top_level_keys' => is_array($individualSource) ? array_keys($individualSource) : [],
+        ]);
 
 
         $request->session()->put('kc_logout_uri', $logoutUrl);

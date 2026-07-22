@@ -23,7 +23,7 @@
                         <tr v-for="(row, i) in results">
                             <td><a href="#" @click="editPy(row)">{{ row.start_date}}</a></td>
                             <td>{{ row.end_date }}</td>
-                            <td>${{ row.total_budget }}</td>
+                            <td>${{ formatMoney(row.total_budget) }}</td>
                             <td>
                                 <div class="btn-group btn-group-sm" role="group" aria-label="Toggle program year status">
                                     <input type="radio" class="btn-check" :name="'btnRadioStatus1'+i"
@@ -185,6 +185,14 @@ export default {
         }
     },
     methods: {
+
+        formatMoney: function (value) {
+            let num = Number(value);
+            if (isNaN(num)) {
+                return value;
+            }
+            return num.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+        },
 
         switchStatus: function (programYear, status) {
             const statusMessage = status === 'inactive'
