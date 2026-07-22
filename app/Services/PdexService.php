@@ -162,10 +162,31 @@ class PdexService
         $payload = $response->json();
 
         if (! is_array($payload)) {
+            Log::warning('PDEX GET '.$path.' returned a non-array body', [
+                'status' => $response->status(),
+                'body_type' => gettype($payload),
+                'body_preview' => substr($response->body(), 0, 500),
+            ]);
+
             return null;
         }
 
-        return $payload['data'] ?? $payload;
+        $data = $payload['data'] ?? $payload;
+
+        // Diagnostics (no PII): confirm the shape of the PDEX response so we can
+        // tell whether option lists arrive empty from the API vs. a parsing gap.
+        Log::info('PDEX GET '.$path.' succeeded', [
+            'status' => $response->status(),
+            'has_data_wrapper' => array_key_exists('data', $payload),
+            'top_level_keys' => array_slice(array_keys($payload), 0, 20),
+            'data_type' => gettype($data),
+            'data_count' => is_array($data) ? count($data) : null,
+            'first_item_keys' => (is_array($data) && isset($data[0]) && is_array($data[0]))
+                ? array_keys($data[0])
+                : null,
+        ]);
+
+        return $data;
     }
 
     /**
@@ -174,7 +195,13 @@ class PdexService
     public function countries(): array
     {
         return Cache::remember('countries', 380, function () {
-            return $this->get('/countries') ?? [];
+            $countries = $this->get('/countries') ?? [];
+
+            Log::info('PDEX countries fetched', [
+                'count' => is_array($countries) ? count($countries) : 0,
+            ]);
+
+            return $countries;
         });
     }
 
@@ -195,6 +222,26 @@ class PdexService
 
             $options = [];
             $labels = [];
+
+            // Diagnostics (no PII): capture the raw field definitions so we can see
+            // the field_ids, their declared types, and whether options arrays exist.
+            Log::info('PDEX studentUtils raw fields', [
+                'field_count' => is_array($fields) ? count($fields) : 0,
+                'fields_type' => gettype($fields),
+                'field_summary' => is_array($fields) ? array_map(function ($field) {
+                    if (! is_array($field)) {
+                        return ['non_array' => gettype($field)];
+                    }
+
+                    return [
+                        'field_id' => $field['field_id'] ?? null,
+                        'type' => $field['type'] ?? null,
+                        'option_count' => isset($field['options']) && is_array($field['options'])
+                            ? count($field['options'])
+                            : 0,
+                    ];
+                }, array_slice($fields, 0, 40)) : [],
+            ]);
 
             if (is_array($fields)) {
                 foreach ($fields as $field) {
@@ -221,6 +268,14 @@ class PdexService
                 fn ($country) => ucwords(strtolower((string) ($country['name'] ?? ''))),
                 array_filter($this->countries(), fn ($c) => is_array($c) && ! empty($c['name']))
             ));
+
+            // Diagnostics (no PII): final counts the applicant form will receive.
+            Log::info('PDEX studentUtils built', [
+                'option_field_ids' => array_keys($options),
+                'option_list_sizes' => array_map('count', $options),
+                'label_field_ids' => array_keys($labels),
+                'countries_count' => count($countries),
+            ]);
 
             return [
                 'options' => $options,
