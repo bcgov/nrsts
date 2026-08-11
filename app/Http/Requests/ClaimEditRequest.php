@@ -36,6 +36,11 @@ class ClaimEditRequest extends FormRequest
     private const TERMINAL_STATUSES = ['Completed', 'Declined', 'Dropped Out', 'Cancelled', 'Expired'];
 
     /**
+     * Intervention Outcome values that require the outcome-detail fields.
+     */
+    private const OUTCOME_REQUIRES_DETAILS = ['Complete', 'Incomplete', 'Failed to Report', 'Cancelled', 'Rescheduled'];
+
+    /**
      * Determine if the user is authorized to make this request.
      *
      * @return bool
@@ -124,6 +129,9 @@ class ClaimEditRequest extends FormRequest
         return [
             'date_of_birth.*' => 'The Date of Birth field is invalid.',
             'outcome_status.required' => 'A reason is required in the outcome status for this action.',
+            'action_plan_result_code.required' => 'Action Plan Result Code is required when an Intervention Outcome is set.',
+            'intervention_essential_skills.required' => 'Intervention Essential Skills is required when an Intervention Outcome is set.',
+            'credential_certificate_earned.required' => 'Credential/Certificate Earned is required when an Intervention Outcome is set.',
         ];
     }
 
@@ -141,11 +149,24 @@ class ClaimEditRequest extends FormRequest
             'program_guid' => 'nullable|exists:programs,guid',
             'outcome_status' => 'nullable|string',
             'ei_reference_code' => 'nullable|string',
+            'action_plan_result_code' => 'nullable|string',
+            'intervention_essential_skills' => 'nullable|string',
+            'credential_certificate_earned' => 'nullable|string',
+            'provincial_office_code' => 'nullable|string',
+            'ei_confirmation' => 'nullable|boolean',
+            'intervention_outcome' => 'nullable|string',
         ];
 
         // Declined and Dropped Out require the institution to record a reason.
         if (in_array($this->claim_status, self::REASON_REQUIRED_STATUSES, true)) {
             $rules['outcome_status'] = 'required|string';
+        }
+
+        // Setting an Intervention Outcome requires the outcome-detail fields.
+        if (in_array($this->intervention_outcome, self::OUTCOME_REQUIRES_DETAILS, true)) {
+            $rules['action_plan_result_code'] = 'required|string';
+            $rules['intervention_essential_skills'] = 'required|string';
+            $rules['credential_certificate_earned'] = 'required|string';
         }
 
         return $rules;
@@ -160,6 +181,12 @@ class ClaimEditRequest extends FormRequest
     {
         if ($this->has('outcome_status') && is_string($this->outcome_status)) {
             $this->merge(['outcome_status' => trim($this->outcome_status)]);
+        }
+
+        // EI Confirmation locks for institutions once set; drop any attempt to change it.
+        $claim = Claim::find($this->id);
+        if ($claim && $claim->ei_confirmation) {
+            $this->request->remove('ei_confirmation');
         }
     }
 

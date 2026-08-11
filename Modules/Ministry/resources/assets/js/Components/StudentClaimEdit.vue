@@ -22,7 +22,7 @@
                         <p>{{ editStudentClaimForm.ei_reference_code || ' - ' }}</p>
                     </div>
 
-                    <ClaimProfileFields :form="editStudentClaimForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" readonly />
+                    <ClaimProfileFields :form="editStudentClaimForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" readonly :show-intervention-fields="true" :intervention-readonly="isTerminal" />
 
                     <hr/>
 

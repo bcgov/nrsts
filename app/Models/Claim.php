@@ -28,9 +28,14 @@ class Claim extends Model
         'gender', 'marital_status', 'number_of_dependants', 'disability_status',
         'indigenous_status', 'indigenous_group', 'immigration_status', 'immigration_year',
         'visible_minority_status', 'racial_identity', 'is_visible_minority',
-        'highest_level_of_education', 'official_language_choice', 'official_language_service',
+        'highest_level_of_education', 'spoken_language', 'intervention_language_of_service',
         'employment_status_intake', 'employment_status_exit', 'precarious_employment',
         'intervention_outcome',
+        // Intervention / agreement details captured by Institution and Ministry.
+        'agreement_holder_name', 'agreement_number', 'action_plan_result_code',
+        'intervention_essential_skills', 'credential_certificate_earned', 'provincial_office_code',
+        'intervention_title', 'intervention_code',
+        'ei_confirmation', 'ei_confirmation_date', 'ei_confirmation_user_guid',
     ];
 
     /**
@@ -44,11 +49,43 @@ class Claim extends Model
         'is_visible_minority' => 'boolean',
         'disability_status' => 'boolean',
         'indigenous_status' => 'boolean',
+        'ei_confirmation' => 'boolean',
+        'ei_confirmation_date' => 'datetime',
     ];
 
     protected static function boot()
     {
         parent::boot();
+
+        // Stamp the fixed intervention/agreement values from Utils onto new claims.
+        static::creating(function ($claim) {
+            $defaults = [
+                'agreement_holder_name' => 'Agreement Holder Name',
+                'agreement_number' => 'Agreement Number',
+                'intervention_title' => 'Intervention Title',
+                'intervention_code' => 'Intervention Code',
+            ];
+
+            foreach ($defaults as $column => $fieldType) {
+                if (empty($claim->{$column})) {
+                    $value = Util::where('field_type', $fieldType)
+                        ->where('active_flag', true)
+                        ->value('field_name');
+
+                    if (! empty($value)) {
+                        $claim->{$column} = $value;
+                    }
+                }
+            }
+        });
+
+        // Stamp the confirming user and timestamp the first time EI is confirmed.
+        static::saving(function ($claim) {
+            if ($claim->ei_confirmation && empty($claim->ei_confirmation_date)) {
+                $claim->ei_confirmation_date = now();
+                $claim->ei_confirmation_user_guid = Auth::check() ? Auth::user()->guid : null;
+            }
+        });
 
         static::updated(function ($claim) {
             $changes = $claim->getChanges();

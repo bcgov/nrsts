@@ -26,7 +26,7 @@
                     </div>
 
                     <div class="col-12">
-                        <Label for="inputApprenticeNumber" class="form-label" value="Apprentice Number"/>
+                        <Label for="inputApprenticeNumber" class="form-label" value="SkilledTradesBC Registration Number"/>
                         <input id="inputApprenticeNumber" type="text" class="form-control" v-model="newApplicationForm.apprentice_number" />
                     </div>
                     

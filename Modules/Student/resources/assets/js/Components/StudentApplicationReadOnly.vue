@@ -24,12 +24,12 @@
                         </Select>
                     </div>
                     
-                    <div class="col-12">
-                        <Label for="inputApprenticeNumber" class="form-label" value="Apprentice Number"/>
+                    <div class="col-md-6">
+                        <Label for="inputApprenticeNumber" class="form-label" value="SkilledTradesBC Registration Number"/>
                         <input id="inputApprenticeNumber" type="text" class="form-control" v-model="application.apprentice_number" readonly="readonly" disabled />
                     </div>
 
-                    <div v-if="application.ei_reference_code" class="col-12">
+                    <div v-if="application.ei_reference_code" class="col-md-6">
                         <Label for="inputEiRef" class="form-label" value="EI Reference Code"/>
                         <Input type="text" class="form-control" id="inputEiRef" :value="application.ei_reference_code" readonly="readonly" disabled/>
                     </div>

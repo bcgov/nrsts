@@ -33,7 +33,7 @@
                 </div>
 
                 <div class="col-12">
-                    <Label for="inputApprenticeNumber" class="form-label" value="Apprentice Number"/>
+                    <Label for="inputApprenticeNumber" class="form-label" value="SkilledTradesBC Registration Number"/>
                     <input id="inputApprenticeNumber" type="text" class="form-control" v-model="newApplicationForm.apprentice_number" />
                 </div>
 
@@ -127,8 +127,8 @@ export default {
                 racial_identity: "",
                 is_visible_minority: false,
                 highest_level_of_education: "",
-                official_language_choice: "",
-                official_language_service: "",
+                spoken_language: "",
+                intervention_language_of_service: "",
                 employment_status_intake: "",
                 employment_status_exit: "",
                 precarious_employment: "",

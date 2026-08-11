@@ -191,6 +191,7 @@ class ApplicationController extends Controller
             'racial_identity' => 'racial_identity',
             'is_visible_minority' => 'is_visible_minority',
             'immigration_year' => 'immigration_year',
+            'language_spoken' => 'spoken_language',
         ];
 
         $prefill = [];
@@ -217,6 +218,7 @@ class ApplicationController extends Controller
             'highest_level_of_education' => 'highest_level_of_education',
             'employment_status_intake' => 'employment_status',
             'province' => 'province',
+            'spoken_language' => 'language_spoken',
         ];
 
         foreach ($selectFields as $claimColumn => $fieldId) {

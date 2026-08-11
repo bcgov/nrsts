@@ -32,7 +32,7 @@ class ClaimProfileUtilsSeeder extends Seeder
                 'Yes', 'No',
             ],
             'Intervention Outcome' => [
-                'Completed', 'In progress', 'Not completed', 'Withdrawn',
+                'Complete', 'Incomplete', 'Failed to Report', 'Cancelled', 'Rescheduled',
             ],
             'Credential Earned' => [
                 'Certificate', 'Diploma', 'Degree', 'Micro-credential', 'None',
@@ -46,6 +46,31 @@ class ClaimProfileUtilsSeeder extends Seeder
             'Regions' => [
                 'BC Lower Mainland', 'BC Vancouver Island', 'BC Interior',
             ],
+            // Fixed intervention/agreement values copied onto each claim on create.
+            'Agreement Holder Name' => [
+                'British Columbia',
+            ],
+            'Agreement Number' => [
+                '999222011',
+            ],
+            'Intervention Title' => [
+                'Apprenticeship',
+            ],
+            'Intervention Code' => [
+                '214',
+            ],
+            // Outcome detail dropdowns required when an Intervention Outcome is set.
+            'Action Plan Result Code' => [
+                'Unemployed but available for work', 'Employed', 'Self-Employed',
+                'Returned to School', 'Unspecified- participant could not be reach',
+                'Not in labour force', 'Starting a new action plan',
+            ],
+            'Intervention Essential Skills' => [
+                'Yes', 'No',
+            ],
+            'Credential Certificate Earned' => [
+                'Yes', 'No', 'Not applicable',
+            ],
         ];
 
         foreach ($categories as $type => $options) {
@@ -56,6 +81,11 @@ class ClaimProfileUtilsSeeder extends Seeder
                 );
             }
         }
+
+        // Drop obsolete Intervention Outcome values no longer offered.
+        Util::where('field_type', 'Intervention Outcome')
+            ->whereNotIn('field_name', $categories['Intervention Outcome'])
+            ->delete();
 
         // Ministry configuration value: the weekly support payment amount ($)
         // used to calculate program totals (# of seats x # of levels x weeks/level x amount).

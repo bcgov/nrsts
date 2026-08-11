@@ -22,7 +22,7 @@
                         <p>{{ editStudentClaimForm.offering?.start_date || ' - ' }}</p>
                     </div>
 
-                    <ClaimProfileFields :form="editStudentClaimForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" readonly />
+                    <ClaimProfileFields :form="editStudentClaimForm" :utils="$attrs.utils" :student-utils="$attrs.studentUtils" readonly :show-intervention-fields="true" :intervention-readonly="isTerminal" :ei-confirmation-locked="!!editStudentClaimForm.ei_confirmation" />
 
                     <hr/>
 
