@@ -114,10 +114,10 @@
             <input id="pf_immigration_year" type="number" min="1900" max="2100" class="form-control" v-model="form.immigration_year" :disabled="readonly" />
         </div>
         <div class="col-md-3">
-            <label class="form-label" for="pf_education">Highest Education Level</label>
+            <label class="form-label" for="pf_education">Education Level</label>
             <select id="pf_education" class="form-select" v-model="form.highest_level_of_education" :disabled="readonly">
                 <option value=""></option>
-                <option v-for="opt in pdexOptions('highest_level_of_education')" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
+                <option v-for="opt in educationLevelOptions" :key="opt" :value="opt">{{ opt }}</option>
             </select>
         </div>
         <div class="col-md-3">
@@ -237,6 +237,7 @@
 
 
 <script>
+import { usePage } from '@inertiajs/vue3';
 export default {
     name: 'ClaimProfileFields',
     props: {
@@ -280,7 +281,13 @@ export default {
         isCanada() {
             return (this.form.country || '') === 'Canada';
         },
+
+        educationLevelOptions() {
+            let utils = usePage().props.utils || {};
+            return (utils['Education Level'] || []).map(u => u.field_name);
+        }
     },
+
     methods: {
         // Return the list of selectable option labels for a util category.
         options(category) {
