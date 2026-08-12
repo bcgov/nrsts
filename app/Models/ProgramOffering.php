@@ -20,7 +20,7 @@ class ProgramOffering extends Model
      * @var array<int, string>
      */
     protected $fillable = ['guid', 'institution_guid', 'program_guid', 'program_year_guid', 'offering_name', 'offering_description',
-        'start_date', 'end_date', 'location_name', 'total_amount', 'total_seats',
+        'start_date', 'end_date', 'location_name', 'intervention_language_of_service', 'total_amount', 'total_seats',
         'intervention_start_date', 'intervention_end_date', 'action_plan_start_date', 'action_plan_end_date',
         'action_plan_outcome', 'action_plan_outcome_date', 'offering_status', 'created_by_guid', 'updated_by_guid'];
 

@@ -31,14 +31,22 @@
                     <Input type="date" class="form-control" id="editStudyEnd" v-model="editOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <Label for="editLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="editLocation" v-model="editOfferingForm.location_name" />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <Label for="editTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="editTotalSeats" v-model="editOfferingForm.total_seats" />
+                </div>
+
+                <div class="col-md-4">
+                    <Label for="editLangService" class="form-label" value="Intervention Language of Service" />
+                    <Select class="form-select" id="editLangService" v-model="editOfferingForm.intervention_language_of_service">
+                        <option value=""></option>
+                        <option v-for="opt in languageServiceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                    </Select>
                 </div>
 
                 <div v-if="editOfferingForm.errors != undefined" class="row">
@@ -70,7 +78,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 
 export default {
     name: 'InstitutionOfferingEdit',
@@ -97,9 +105,16 @@ export default {
                 start_date: "",
                 end_date: "",
                 location_name: "",
+                intervention_language_of_service: "",
                 total_seats: 0,
                 offering_status: 'draft',
             },
+        }
+    },
+    computed: {
+        languageServiceOptions() {
+            let utils = usePage().props.utils || {};
+            return (utils['Language Service'] || []).map(u => u.field_name);
         }
     },
     methods: {
@@ -136,6 +151,7 @@ export default {
         this.editOfferingFormData.start_date = this.toDateInput(this.offering.start_date);
         this.editOfferingFormData.end_date = this.toDateInput(this.offering.end_date);
         this.editOfferingFormData.location_name = this.offering.location_name;
+        this.editOfferingFormData.intervention_language_of_service = this.offering.intervention_language_of_service;
         this.editOfferingFormData.total_seats = this.offering.total_seats;
         this.editOfferingFormData.offering_status = this.offering.offering_status;
 

@@ -222,13 +222,9 @@ class PdexService
 
             $options = [];
             $labels = [];
-            $permissionLabels = [];
 
             // Diagnostics (no PII): capture the raw field definitions so we can see
             // the field_ids, their declared types, and whether options arrays exist.
-            Log::info('All the PDEX studentUtils fields', [
-                'fields' => is_array($fields) ? array_slice($fields, 0, 40) : $fields,
-            ]);
             Log::info('PDEX studentUtils raw fields', [
                 'field_count' => is_array($fields) ? count($fields) : 0,
                 'fields_type' => gettype($fields),
@@ -252,7 +248,6 @@ class PdexService
                     if (! is_array($field) || empty($field['field_id'])) {
                         continue;
                     }
-                    $permissionLabels[$field['field_id']] = (string) ($field['permission_label'] ?? '');
 
                     if (($field['type'] ?? null) === 'select' && ! empty($field['options'])) {
                         $options[$field['field_id']] = array_values(array_map(function ($opt) {
@@ -285,9 +280,7 @@ class PdexService
             return [
                 'options' => $options,
                 'labels' => $labels,
-                'permission_labels' => $permissionLabels,
                 'countries' => $countries,
-                'fields' => $fields, // raw fields for diagnostics
             ];
         });
     }

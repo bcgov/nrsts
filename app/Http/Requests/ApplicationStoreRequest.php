@@ -91,10 +91,8 @@ class ApplicationStoreRequest extends FormRequest
             'is_visible_minority' => 'nullable|boolean',
             'highest_level_of_education' => 'nullable|string',
             'spoken_language' => 'nullable|string',
-            'intervention_language_of_service' => 'nullable|string',
             'employment_status_intake' => 'nullable|string',
             'employment_status_exit' => 'nullable|string',
-            'precarious_employment' => 'nullable|string',
             'intervention_outcome' => 'nullable|string',
 
         ];

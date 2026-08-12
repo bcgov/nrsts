@@ -45,6 +45,13 @@
                     <Input type="text" class="form-control" id="editLocation" v-model="editOfferingForm.location_name" />
                 </div>
                 <div class="col-md-6">
+                    <Label for="editLangService" class="form-label" value="Intervention Language of Service" />
+                    <Select class="form-select" id="editLangService" v-model="editOfferingForm.intervention_language_of_service">
+                        <option value=""></option>
+                        <option v-for="opt in languageServiceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                    </Select>
+                </div>
+                <div class="col-md-6">
                     <Label for="editTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="editTotalSeats" v-model="editOfferingForm.total_seats" />
                 </div>
@@ -95,7 +102,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 
 export default {
     name: 'ProgramOfferingEdit',
@@ -137,6 +144,7 @@ export default {
                 start_date: "",
                 end_date: "",
                 location_name: "",
+                intervention_language_of_service: "",
                 total_amount: 0,
                 total_seats: 0,
                 offering_status: 'draft',
@@ -148,6 +156,10 @@ export default {
             if (!this.editOfferingForm) return '';
             let match = (this.institutions || []).find(i => i.guid === this.editOfferingForm.institution_guid);
             return match ? match.name : '';
+        },
+        languageServiceOptions() {
+            let utils = usePage().props.utils || {};
+            return (utils['Language Service'] || []).map(u => u.field_name);
         },
         isBudgetDerived() {
             return Number(this.supportPaymentPerWeek) > 0;
@@ -203,6 +215,7 @@ export default {
         this.editOfferingFormData.start_date = this.toDateInput(this.offering.start_date);
         this.editOfferingFormData.end_date = this.toDateInput(this.offering.end_date);
         this.editOfferingFormData.location_name = this.offering.location_name;
+        this.editOfferingFormData.intervention_language_of_service = this.offering.intervention_language_of_service;
         this.editOfferingFormData.total_amount = this.offering.total_amount;
         this.editOfferingFormData.total_seats = this.offering.total_seats;
         this.editOfferingFormData.offering_status = this.offering.offering_status;

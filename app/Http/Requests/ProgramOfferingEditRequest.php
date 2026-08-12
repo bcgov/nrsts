@@ -36,6 +36,7 @@ class ProgramOfferingEditRequest extends FormRequest
             'start_date' => 'nullable|date',
             'end_date' => 'nullable|date|after_or_equal:start_date',
             'location_name' => 'nullable',
+            'intervention_language_of_service' => 'nullable|string',
             'total_amount' => ['required', 'numeric', 'min:0', new OfferingWithinProgramYearBudget($this->program_year_guid, $this->guid)],
             'total_seats' => 'required|integer|min:0',
             'offering_status' => 'required|in:draft,submitted,approved,inactive,declined',

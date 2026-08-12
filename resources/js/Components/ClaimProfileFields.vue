@@ -128,24 +128,10 @@
             </select>
         </div>
         <div class="col-md-3">
-            <label class="form-label" for="pf_lang_service">Intervention Language of Service</label>
-            <select id="pf_lang_service" class="form-select" v-model="form.intervention_language_of_service" :disabled="readonly">
-                <option value=""></option>
-                <option v-for="opt in options('Language Service')" :key="opt" :value="opt">{{ opt }}</option>
-            </select>
-        </div>
-        <div class="col-md-3">
             <label class="form-label" for="pf_emp_intake">Employment Status (Intake)</label>
             <select id="pf_emp_intake" class="form-select" v-model="form.employment_status_intake" :disabled="readonly">
                 <option value=""></option>
                 <option v-for="opt in pdexOptions('employment_status')" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
-            </select>
-        </div>
-        <div class="col-md-3">
-            <label class="form-label" for="pf_precarious">Precarious Employment</label>
-            <select id="pf_precarious" class="form-select" v-model="form.precarious_employment" :disabled="readonly">
-                <option value=""></option>
-                <option v-for="opt in options('Precarious Employment')" :key="opt" :value="opt">{{ opt }}</option>
             </select>
         </div>
         <div v-if="form.employment_status_exit" class="col-md-3">

@@ -31,14 +31,22 @@
                     <Input type="date" class="form-control" id="inputStudyEnd" v-model="newOfferingForm.end_date" />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <Label for="inputLocation" class="form-label" value="Location" />
                     <Input type="text" class="form-control" id="inputLocation" v-model="newOfferingForm.location_name" />
                 </div>
 
-                <div class="col-md-6">
+                <div class="col-md-4">
                     <Label for="inputTotalSeats" class="form-label" value="Total Seats" />
                     <Input type="number" min="0" class="form-control" id="inputTotalSeats" v-model="newOfferingForm.total_seats" />
+                </div>
+
+                <div class="col-md-4">
+                    <Label for="inputLangService" class="form-label" value="Intervention Language of Service" />
+                    <Select class="form-select" id="inputLangService" v-model="newOfferingForm.intervention_language_of_service">
+                        <option value=""></option>
+                        <option v-for="opt in languageServiceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                    </Select>
                 </div>
 
                 <div v-if="newOfferingForm.errors != undefined" class="row">
@@ -70,7 +78,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 
 export default {
     name: 'InstitutionOfferingCreate',
@@ -93,9 +101,16 @@ export default {
                 start_date: "",
                 end_date: "",
                 location_name: "",
+                intervention_language_of_service: "",
                 total_seats: 0,
                 offering_status: 'draft',
             },
+        }
+    },
+    computed: {
+        languageServiceOptions() {
+            let utils = usePage().props.utils || {};
+            return (utils['Language Service'] || []).map(u => u.field_name);
         }
     },
     methods: {

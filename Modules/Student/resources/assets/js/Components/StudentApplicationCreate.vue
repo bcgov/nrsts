@@ -128,10 +128,8 @@ export default {
                 is_visible_minority: false,
                 highest_level_of_education: "",
                 spoken_language: "",
-                intervention_language_of_service: "",
                 employment_status_intake: "",
                 employment_status_exit: "",
-                precarious_employment: "",
                 intervention_outcome: "",
             },
         }

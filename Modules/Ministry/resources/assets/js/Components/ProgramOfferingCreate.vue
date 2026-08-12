@@ -45,6 +45,14 @@
                 </div>
 
                 <div class="col-md-6">
+                    <Label for="inputLangService" class="form-label" value="Intervention Language of Service" />
+                    <Select class="form-select" id="inputLangService" v-model="newOfferingForm.intervention_language_of_service">
+                        <option value=""></option>
+                        <option v-for="opt in languageServiceOptions" :key="opt" :value="opt">{{ opt }}</option>
+                    </Select>
+                </div>
+
+                <div class="col-md-6">
                     <Label for="inputTotalAmount" class="form-label" value="Total Budget" />
                     <Input type="number" step="0.01" min="0" class="form-control" id="inputTotalAmount" v-model="newOfferingForm.total_amount" />
                 </div>
@@ -91,7 +99,7 @@ import Select from '@/Components/Select.vue';
 import Input from '@/Components/Input.vue';
 import Label from '@/Components/Label.vue';
 import FormSubmitAlert from '@/Components/FormSubmitAlert.vue';
-import { useForm } from '@inertiajs/vue3';
+import { useForm, usePage } from '@inertiajs/vue3';
 
 export default {
     name: 'ProgramOfferingCreate',
@@ -118,10 +126,17 @@ export default {
                 start_date: "",
                 end_date: "",
                 location_name: "",
+                intervention_language_of_service: "",
                 total_amount: 0,
                 total_seats: 0,
                 offering_status: 'draft',
             },
+        }
+    },
+    computed: {
+        languageServiceOptions() {
+            let utils = usePage().props.utils || {};
+            return (utils['Language Service'] || []).map(u => u.field_name);
         }
     },
     methods: {

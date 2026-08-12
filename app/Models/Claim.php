@@ -28,8 +28,8 @@ class Claim extends Model
         'gender', 'marital_status', 'number_of_dependants', 'disability_status',
         'indigenous_status', 'indigenous_group', 'immigration_status', 'immigration_year',
         'visible_minority_status', 'racial_identity', 'is_visible_minority',
-        'highest_level_of_education', 'spoken_language', 'intervention_language_of_service',
-        'employment_status_intake', 'employment_status_exit', 'precarious_employment',
+        'highest_level_of_education', 'spoken_language',
+        'employment_status_intake', 'employment_status_exit',
         'intervention_outcome',
         // Intervention / agreement details captured by Institution and Ministry.
         'agreement_holder_name', 'agreement_number', 'action_plan_result_code',
