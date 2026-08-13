@@ -339,7 +339,7 @@ export default {
         },
     },
     mounted() {
-        console.log(this.studentUtils);
+        // console.log(this.studentUtils);
     },
 };
 </script>

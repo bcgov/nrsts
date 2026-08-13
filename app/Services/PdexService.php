@@ -223,9 +223,9 @@ class PdexService
             $options = [];
             $labels = [];
             $permissionLabels = [];
-            Log::info('All fields', $fields);
-            Log::info('All fields is array? ' . is_array($fields));
-            Log::info('All fields type: ' . gettype($fields));
+            // Log::info('All fields', $fields);
+            // Log::info('All fields is array? ' . is_array($fields));
+            // Log::info('All fields type: ' . gettype($fields));
 
             // Diagnostics (no PII): capture the raw field definitions so we can see
             // the field_ids, their declared types, and whether options arrays exist.

@@ -46,9 +46,6 @@ class Claim extends Model
     protected $casts = [
         'number_of_dependants' => 'integer',
         'immigration_year' => 'integer',
-        'is_visible_minority' => 'boolean',
-        'disability_status' => 'boolean',
-        'indigenous_status' => 'boolean',
         'ei_confirmation' => 'boolean',
         'ei_confirmation_date' => 'datetime',
     ];
