@@ -131,14 +131,14 @@
             <label class="form-label" for="pf_emp_intake">Employment Status (Intake)</label>
             <select id="pf_emp_intake" class="form-select" v-model="form.employment_status_intake" :disabled="readonly">
                 <option value=""></option>
-                <option v-for="opt in pdexOptions('employment_status')" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
+                <option v-for="opt in employmentStatusOptions" :key="opt" :value="opt">{{ opt }}</option>
             </select>
         </div>
         <div v-if="form.employment_status_exit" class="col-md-3">
             <label class="form-label" for="pf_emp_exit">Employment Status (Exit)</label>
             <select id="pf_emp_exit" class="form-select" v-model="form.employment_status_exit" :disabled="readonly">
                 <option value=""></option>
-                <option v-for="opt in pdexOptions('employment_status')" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
+                <option v-for="opt in employmentStatusOptions" :key="opt" :value="opt">{{ opt }}</option>
             </select>
         </div>
 
@@ -285,7 +285,12 @@ export default {
         educationLevelOptions() {
             let utils = usePage().props.utils || {};
             return (utils['Education Level'] || []).map(u => u.field_name);
+        },
+        employmentStatusOptions() {
+            let utils = usePage().props.utils || {};
+            return (utils['Employment Status'] || []).map(u => u.field_name);
         }
+
     },
 
     methods: {
