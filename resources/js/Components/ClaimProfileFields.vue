@@ -103,10 +103,10 @@
         </div>
         
         <div class="col-md-3">
-            <label class="form-label" for="pf_immigration">Immigration Status</label>
+            <label class="form-label" for="pf_immigration">Are you an immigrant?</label>
             <select id="pf_immigration" class="form-select" v-model="form.immigration_status" :disabled="readonly">
                 <option value=""></option>
-                <option v-for="opt in pdexOptions('immigration_status')" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
+                <option v-for="opt in immigrationStatusOptions" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
             </select>
         </div>
         <div class="col-md-3">
@@ -316,6 +316,13 @@ export default {
                 const mapped = map[(opt.label || '').trim().toLowerCase()];
                 return mapped ? mapped : { label: opt.label, value: opt.value };
             });
+        },
+        immigrationStatusOptions() {
+            return [
+                { label: 'Yes', value: 'yes' },
+                { label: 'No', value: 'no' },
+                { label: 'Prefer not to answer', value: 'u' },
+            ];
         },
         // Return the PDEX display label for a checkbox field_id.
         pdexLabel(fieldId) {
