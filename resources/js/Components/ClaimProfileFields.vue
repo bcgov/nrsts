@@ -106,7 +106,7 @@
             <label class="form-label" for="pf_immigration">Are you an immigrant?</label>
             <select id="pf_immigration" class="form-select" v-model="form.immigration_status" :disabled="readonly">
                 <option value=""></option>
-                <option v-for="opt in immigrationStatusOptions" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
+                <option v-for="opt in immigrationStatusOptions()" :key="opt.value" :value="opt.label">{{ opt.label }}</option>
             </select>
         </div>
         <div class="col-md-3">
