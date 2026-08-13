@@ -222,6 +222,10 @@ class PdexService
 
             $options = [];
             $labels = [];
+            $permissionLabels = [];
+            Log::info('All fields', $fields);
+            Log::info('All fields is array? ' . is_array($fields));
+            Log::info('All fields type: ' . gettype($fields));
 
             // Diagnostics (no PII): capture the raw field definitions so we can see
             // the field_ids, their declared types, and whether options arrays exist.
@@ -245,10 +249,12 @@ class PdexService
 
             if (is_array($fields)) {
                 foreach ($fields as $field) {
+                    // Skip any field that is not an array or does not have a field_id.
                     if (! is_array($field) || empty($field['field_id'])) {
                         continue;
                     }
 
+                    // Capture option lists for select fields, keyed by field_id.
                     if (($field['type'] ?? null) === 'select' && ! empty($field['options'])) {
                         $options[$field['field_id']] = array_values(array_map(function ($opt) {
                             return [
@@ -258,8 +264,10 @@ class PdexService
                         }, $field['options']));
                     }
 
-                    if (($field['type'] ?? null) === 'checkbox' && ! empty($field['label'])) {
+                    // Capture labels for checkbox fields, keyed by field_id.
+                    if (! empty($field['label'])) {
                         $labels[$field['field_id']] = (string) $field['label'];
+                        $permissionLabels[$field['field_id']] = (string) ($field['permission_label'] ?? '');
                     }
                 }
             }
@@ -280,6 +288,7 @@ class PdexService
             return [
                 'options' => $options,
                 'labels' => $labels,
+                'permission_labels' => $permissionLabels,
                 'countries' => $countries,
             ];
         });
